@@ -89,5 +89,5 @@ for p in pList:
     print("root mean square relative L2-error for p = {} is: {}".format(p, rmserr))
     print("root mean square error indicator element for p = {} is: {}".format(p, rmsindic))
 
-    sio.savemat('data/_ErrIndic2drandcheck_p'+str(p)+'.mat', {'ETListloc': ETList, 'ETListmiddle': ETListmiddle,
+    sio.savemat('_ErrIndic2drandcheck_p'+str(p)+'.mat', {'ETListloc': ETList, 'ETListmiddle': ETListmiddle,
                                                               'absError': absErrorList, 'relError': relErrorList})
