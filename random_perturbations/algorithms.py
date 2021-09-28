@@ -56,7 +56,7 @@ def computeCSI_offline(world, NepsilonElement, k, boundaryConditions, model, cor
         return aRefList, KmsijList, muTPrimeList, time_basis, timeMatrixList
 
 def compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList, KmsijList,muTPrimeList,k,model,compute_indicator=False,
-                                 correctorsList=None):
+                                 correctorsList=None, compute_correc=False):
     computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
     patchT = list(map(computePatch, range(world.NtCoarse)))
     dim = np.size(world.NWorldFine)
@@ -161,17 +161,28 @@ def compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList, KmsijList,muTPri
         else:
             indicatorT = None
 
+        if compute_correc:
+            assert(correctorsList is not None)
+            correctorsT = np.einsum('i, ijk -> jk', alphaT, correctorsList)
+        else:
+            correctorsT = None
+
         KmsijT = np.einsum('i, ijk -> jk', alphaT, KmsijList)
 
-        return KmsijT, indicatorT
+        return KmsijT, indicatorT, correctorsT
 
-    KmsijT_list, error_indicator = zip(*map(compute_combinedT, range(world.NtCoarse)))
+    KmsijT_list, error_indicator, correctorsT_list = zip(*map(compute_combinedT, range(world.NtCoarse)))
 
     KmsijT = tuple(KmsijT_list)
 
     KFull = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijT, periodic=True)
+    if compute_correc:
+        correctorsT = tuple(correctorsT_list)
+        correcBasis = lod_periodic.assembleBasisCorrectors(world, patchT, correctorsT, periodic=True)
+    else:
+        correcBasis = None
 
-    return KFull, error_indicator
+    return KFull, error_indicator, correcBasis
 
 def compute_perturbed_MsStiffness(world,aPert, aRef, KmsijRef, muTPrimeRef,k, update_percentage):
     computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)

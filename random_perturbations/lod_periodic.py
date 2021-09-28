@@ -113,6 +113,63 @@ def assembleMsStiffnessMatrix(world, patchT, KmsijT, periodic=False):
 
     return Kms
 
+
+def assembleBasisCorrectors(world, patchT, basisCorrectorsListT, periodic=False):
+    '''Compute the basis correctors given the elementwise basis
+    correctors for each coarse element. Adapted from gridlod.pglod.assembleBasisCorrectors with newly added periodic
+    functionality. In the periodic case, you are also allowed to hand over just a single basisCorrectorsList
+    if these local correctors are the same for every element (e.g. for periodic coefficients).
+
+    '''
+    NWorldCoarse = world.NWorldCoarse
+    NCoarseElement = world.NCoarseElement
+    NWorldFine = NWorldCoarse * NCoarseElement
+
+    NtCoarse = np.prod(NWorldCoarse)
+    NpCoarse = np.prod(NWorldCoarse + 1)
+    NpFine = np.prod(NWorldFine + 1)
+
+    TpIndexMap = util.lowerLeftpIndexMap(np.ones_like(NWorldCoarse), NWorldCoarse)
+    TpStartIndices = util.lowerLeftpIndexMap(NWorldCoarse - 1, NWorldCoarse)
+
+    cols = []
+    rows = []
+    data = []
+    for TInd in range(NtCoarse):
+        if periodic and not (isinstance(basisCorrectorsListT, tuple)):  # if only one CorrectorsList is given in periodic case
+            basisCorrectorsList = basisCorrectorsListT
+        else:
+            basisCorrectorsList = basisCorrectorsListT[TInd]
+        patch = patchT[TInd]
+
+        NPatchFine = patch.NPatchCoarse * NCoarseElement
+        iPatchWorldFine = patch.iPatchWorldCoarse * NCoarseElement
+
+        patchpIndexMap = util.lowerLeftpIndexMap(NPatchFine, NWorldFine)
+        patchpStartIndex = util.convertpCoordIndexToLinearIndex(NWorldFine, iPatchWorldFine)
+
+        if periodic:
+            rowsTpCoord = (iPatchWorldFine.T + util.convertpLinearIndexToCoordIndex(NWorldFine,
+                                                                                            patchpIndexMap).T) \
+                          % NWorldFine
+            rowsT = util.convertpCoordIndexToLinearIndex(NWorldFine, rowsTpCoord)
+            colsTbase = TpStartIndices[TInd] + TpIndexMap
+            colsTpCoord = util.convertpLinearIndexToCoordIndex(NWorldCoarse, colsTbase).T % NWorldCoarse
+            colsT = util.convertpCoordIndexToLinearIndex(NWorldCoarse, colsTpCoord)
+        else:
+            colsT = TpStartIndices[TInd] + TpIndexMap
+            rowsT = patchpStartIndex + patchpIndexMap
+
+        dataT = np.hstack(basisCorrectorsList)
+
+        cols.extend(np.repeat(colsT, np.size(rowsT)))
+        rows.extend(np.tile(rowsT, np.size(colsT)))
+        data.extend(dataT)
+
+    basisCorrectors = sparse.csc_matrix((data, (rows, cols)), shape=(NpFine, NpCoarse))
+
+    return basisCorrectors
+
 def solvePeriodic(world, KmsFull, rhs, faverage, boundaryConditions=None):
     ''' solves a pglod linear system with periodic boundary conditions,
     adapted from gridlod.pglod.solves'''

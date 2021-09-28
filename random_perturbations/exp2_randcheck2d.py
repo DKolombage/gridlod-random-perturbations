@@ -11,7 +11,7 @@ NpFine = np.prod(NFine+1)
 Nepsilon = np.array([128,128])
 NCoarse = np.array([32,32])
 k=4
-NSamples = 350
+NSamples = 50#350
 dim = np.size(NFine)
 
 boundaryConditions = None
@@ -29,21 +29,27 @@ xpFine = util.pCoordinates(NFine)
 ffunc = lambda x: 8*np.pi**2*np.sin(2*np.pi*x[:,0])*np.cos(2*np.pi*x[:,1])
 f = ffunc(xpFine).flatten()
 
-aRefList, KmsijList,muTPrimeList, timeBasis, timeMatrixList = algorithms.computeCSI_offline(world, Nepsilon // NCoarse,
-                                                                                            k,boundaryConditions,model)
+aRefList, KmsijList,muTPrimeList, timeBasis, timeMatrixList, correctorsList\
+    = algorithms.computeCSI_offline(world, Nepsilon // NCoarse,k,boundaryConditions,model,correctors=True)
 aRef = np.copy(aRefList[-1])
 KmsijRef = np.copy(KmsijList[-1])
 muTPrimeRef = muTPrimeList[-1]
+correctorsRef = correctorsList[-1]
 
 print('offline time for new approach {}'.format(timeBasis+np.sum(np.array(timeMatrixList))))
 print('offline time for perturbed LOD {}'.format(timeMatrixList[-1]))
 
-abserr_comb= np.zeros((len(pList), NSamples))
 relerr_comb= np.zeros((len(pList), NSamples))
-abserr_noup= np.zeros((len(pList), NSamples))
 relerr_noup= np.zeros((len(pList), NSamples))
-abserr_up = np.zeros((len(pList), NSamples))
 relerr_up = np.zeros((len(pList), NSamples))
+relerr_comb_H1Coarse = np.zeros((len(pList), NSamples))
+relerr_comb_H1Fine = np.zeros((len(pList), NSamples))
+relerr_comb_energyCoarse = np.zeos((len(pList), NSamples))
+relerr_comb_energyFine = np.zeros((len(pList), NSamples))
+relerr_noup_H1Coarse = np.zeros((len(pList), NSamples))
+relerr_noup_H1Fine = np.zeros((len(pList), NSamples))
+relerr_noup_energyCoarse = np.zeos((len(pList), NSamples))
+relerr_noup_energyFine = np.zeros((len(pList), NSamples))
 
 def computeKmsij(TInd, a, IPatch):
     patch = lod_periodic.PatchPeriodic(world, k, TInd)
@@ -56,6 +62,7 @@ def computeKmsij(TInd, a, IPatch):
 # LOD for deterministic coeffcient - no updates
 basis = fem.assembleProlongationMatrix(world.NWorldCoarse, world.NCoarseElement)
 MFull = fem.assemblePatchMatrix(world.NWorldFine, world.MLocFine)
+MgradFull = fem.assemblePatchMatrix(world.NWorldFine, world.ALocFine)
 computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
 patchT = list(map(computePatch, range(world.NtCoarse)))
 KFullpert = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijRef, periodic=True)
@@ -63,6 +70,8 @@ bFull = basis.T * MFull * f
 faverage = np.dot(MFull * np.ones(NpFine), f)
 uFullpert, _ = lod_periodic.solvePeriodic(world, KFullpert, bFull, faverage, boundaryConditions)
 uLodCoarsepert = basis * uFullpert
+modbasispert = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsRef, periodic=True)
+uLodFinepert = modbasispert * uFullpert
 
 ii = 0
 for p in pList:
@@ -81,41 +90,76 @@ for p in pList:
         computeKmsijT = lambda TInd: computeKmsij(TInd, aPert, IPatch)
         if p == 0.1:
             tic = time.perf_counter()
-            patchT, _, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
+            patchT, correctorsTtrue, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
             KFulltrue = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijTtrue, periodic=True)
             toc = time.perf_counter()
             mean_time_true += (toc-tic)
+            correctorsTtrue = tuple(correctorsTtrue)
+            modbasistrue = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsTtrue, periodic=True)
         else:
-            patchT, _, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
+            patchT, correctorsTtrue, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
             KFulltrue = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijTtrue, periodic=True)
+            correctorsTtrue = tuple(correctorsTtrue)
+            modbasistrue = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsTtrue, periodic=True)
 
         bFull = basis.T * MFull * f
         uFulltrue, _ = lod_periodic.solvePeriodic(world, KFulltrue, bFull, faverage, boundaryConditions)
         uLodCoarsetrue = basis * uFulltrue
+        uLodFinetrue = modbasistrue * uFulltrue
 
         #combined LOD
         if p == 0.1:
             tic = time.perf_counter()
-            KFullcomb, _ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,
-                                                                   k,model,compute_indicator=False)
+            _, _, _ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,
+                                                                   k,model,compute_indicator=False,
+                                                                   correctorsList=None, compute_correc=False)
             toc = time.perf_counter()
             mean_time_combined += (toc-tic)
+            KFullcomb, _, correctorsBasiscomb = algorithms.compute_combined_MsStiffness(world, Nepsilon, aPert,
+                                                                                        aRefList, KmsijList,
+                                                                                        muTPrimeList,
+                                                                                        k, model,
+                                                                                        compute_indicator=False,
+                                                                                        correctorsList=correctorsList,
+                                                                                        compute_correc=True)
         else:
-            KFullcomb, _ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,
-                                                                   k,model,compute_indicator=False)
+            KFullcomb, _, correctorsBasiscomb = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,
+                                                                   k,model,compute_indicator=False,
+                                                                   correctorsList=correctorsList, compute_correc=True)
         bFull = basis.T * MFull * f
         uFullcomb, _ = lod_periodic.solvePeriodic(world, KFullcomb, bFull, faverage, boundaryConditions)
         uLodCoarsecomb = basis * uFullcomb
+        modbasiscomb = basis - correctorsBasiscomb
+        uLodFinecomb = modbasiscomb * uFullcomb
 
         L2norm = np.sqrt(np.dot(uLodCoarsetrue, MFull * uLodCoarsetrue))
         abs_error_combined = np.sqrt(np.dot(uLodCoarsetrue - uLodCoarsecomb, MFull * (uLodCoarsetrue - uLodCoarsecomb)))
-        abserr_comb[ii, N] = abs_error_combined
         relerr_comb[ii, N] = abs_error_combined / L2norm
+        AFull = fem.assemblePatchMatrix(world.NWorldFine, world.ALocFine, aPert)
+        H1normFine = np.sqrt(np.dot(uLodFinetrue, MgradFull * uLodFinetrue))
+        H1normCoarse = np.sqrt(np.dot(uLodCoarsetrue, MgradFull * uLodCoarsetrue))
+        energynormFine = np.sqrt(np.dot(uLodFinetrue, AFull * uLodFinetrue))
+        energynormCoarse = np.sqrt(np.dot(uLodCoarsetrue, AFull * uLodCoarsetrue))
+        abs_error_combinedH1Fine = np.sqrt(np.dot(uLodFinetrue - uLodFinecomb, MgradFull * (uLodFinetrue - uLodFinecomb)))
+        relerr_comb_H1Fine[ii, N] = abs_error_combinedH1Fine / H1normFine
+        abs_error_combinedH1Coarse = np.sqrt(np.dot(uLodCoarsetrue - uLodCoarsecomb, MgradFull * (uLodCoarsetrue - uLodCoarsecomb)))
+        relerr_comb_H1Coarse[ii, N] = abs_error_combinedH1Coarse / H1normCoarse
+        abs_error_combinedenergyFine = np.sqrt(np.dot(uLodFinetrue - uLodFinecomb, AFull * (uLodFinetrue - uLodFinecomb)))
+        relerr_comb_energyFine[ii, N] = abs_error_combinedenergyFine / energynormFine
+        abs_error_combinedenergyCoarse = np.sqrt(np.dot(uLodCoarsetrue - uLodCoarsecomb, AFull * (uLodCoarsetrue - uLodCoarsecomb)))
+        relerr_comb_energyCoarse[ii, N] = abs_error_combinedenergyCoarse / energynormCoarse
 
         # standard LOD no updates
         abs_error_pert = np.sqrt(np.dot(uLodCoarsetrue - uLodCoarsepert, MFull * (uLodCoarsetrue - uLodCoarsepert)))
-        abserr_noup[ii, N] = abs_error_pert
         relerr_noup[ii, N] = abs_error_pert / L2norm
+        abs_error_pertH1Fine = np.sqrt(np.dot(uLodFinetrue - uLodFinepert, MgradFull * (uLodFinetrue - uLodFinepert)))
+        relerr_noup_H1Fine[ii, N] = abs_error_pertH1Fine / H1normFine
+        abs_error_pertH1Coarse = np.sqrt(np.dot(uLodCoarsetrue - uLodCoarsepert, MgradFull * (uLodCoarsetrue - uLodCoarsepert)))
+        relerr_noup_H1Coarse[ii, N] = abs_error_pertH1Coarse / H1normCoarse
+        abs_error_pertenergyFine = np.sqrt(np.dot(uLodFinetrue - uLodFinepert, AFull * (uLodFinetrue - uLodFinepert)))
+        relerr_noup_energyFine[ii, N] = abs_error_pertenergyFine / energynormFine
+        abs_error_pertenergyCoarse = np.sqrt(np.dot(uLodCoarsetrue - uLodCoarsepert, AFull * (uLodCoarsetrue - uLodCoarsepert)))
+        relerr_noup_energyCoarse[ii, N] = abs_error_pertenergyCoarse / energynormCoarse
 
         # LOD with updates
         if p == 0.1:
@@ -129,15 +173,34 @@ for p in pList:
             uLodCoarsepertup = basis * uFullpertup
             error_pertup = np.sqrt(
                 np.dot(uLodCoarsetrue - uLodCoarsepertup, MFull * (uLodCoarsetrue - uLodCoarsepertup)))
-            abserr_up[ii, N] = error_pertup
             relerr_up[ii, N] = error_pertup / L2norm
 
     rmserrNew = np.sqrt(1. / NSamples * np.sum(relerr_comb[ii, :] ** 2))
     rmserrNoup = np.sqrt(1. / NSamples * np.sum(relerr_noup[ii, :] ** 2))
+    rmserrNewH1Fine = np.sqrt(1. / NSamples * np.sum(relerr_comb_H1Fine[ii, :] ** 2))
+    rmserrNoupH1Fine = np.sqrt(1. / NSamples * np.sum(relerr_noup_H1Fine[ii, :] ** 2))
+    rmserrNewH1Coarse = np.sqrt(1. / NSamples * np.sum(relerr_comb_H1Coarse[ii, :] ** 2))
+    rmserrNoupH1Coarse = np.sqrt(1. / NSamples * np.sum(relerr_noup_H1Coarse[ii, :] ** 2))
+    rmserrNewenergyFine = np.sqrt(1. / NSamples * np.sum(relerr_comb_energyFine[ii, :] ** 2))
+    rmserrNoupenergyFine = np.sqrt(1. / NSamples * np.sum(relerr_noup_energyFine[ii, :] ** 2))
+    rmserrNewenergyCoarse = np.sqrt(1. / NSamples * np.sum(relerr_comb_energyCoarse[ii, :] ** 2))
+    rmserrNoupenergyCoarse = np.sqrt(1. / NSamples * np.sum(relerr_noup_energyCoarse[ii, :] ** 2))
     rmserrUp = np.sqrt(1. / NSamples * np.sum(relerr_up[ii, :] ** 2))
     print("root mean square relative L2-error for new LOD over {} samples for p={} is: {}".format(NSamples,p,rmserrNew))
     print("root mean square relative L2-error for perturbed LOD without updates over {} samples for p={} is: {}".
           format(NSamples, p, rmserrNoup))
+    print("root mean square relative H1-error for new LODcoarse over {} samples for p={} is: {}".format(NSamples, p, rmserrNewH1Coarse))
+    print("root mean square relative H1-error for perturbed LODcoarse without updates over {} samples for p={} is: {}".
+          format(NSamples, p, rmserrNoupH1Coarse))
+    print("root mean square relative H1-error for new LODfine over {} samples for p={} is: {}".format(NSamples,p,rmserrNewH1Fine))
+    print("root mean square relative H1-error for perturbed LODfine without updates over {} samples for p={} is: {}".
+          format(NSamples, p, rmserrNoupH1Fine))
+    print("root mean square relative energy error for new LODcoarse over {} samples for p={} is: {}".format(NSamples, p, rmserrNewenergyCoarse))
+    print("root mean square relative energy error for perturbed LODcoarse without updates over {} samples for p={} is: {}".
+          format(NSamples, p, rmserrNoupenergyCoarse))
+    print("root mean square relative energy error for new LODfine over {} samples for p={} is: {}".format(NSamples,p,rmserrNewenergyFine))
+    print("root mean square relative energy error for perturbed LODfine without updates over {} samples for p={} is: {}".
+          format(NSamples, p, rmserrNoupenergyFine))
     if p == 0.1:
         print("root mean square relative L2-error for perturbed LOD with {} updates over {} samples for p={} is: {}".
               format(percentage_comp, NSamples, p, rmserrUp))
@@ -154,6 +217,13 @@ for p in pList:
               format(NSamples, percentage_comp,mean_time_perturbed))
         print("mean assembly time for new LOD over {} samples is: {}".format(NSamples, mean_time_combined))
 
-sio.savemat('_meanErr2drandcheck.mat', {'abserrNew': abserr_comb, 'relerrNew': relerr_comb,
-                                        'absErrNoup': abserr_noup, 'relerrNoup': abserr_noup,
-                                        'absErrUp': abserr_up, 'relerrUp': relerr_up, 'pList': pList})
+sio.savemat('_meanErr2drandcheck.mat', {'relerrNew': relerr_comb,'relerrNoup': relerr_noup, 'relerrUp': relerr_up,
+                                        'relerrNewH1Coarse': relerr_comb_H1Coarse,
+                                        'relerrNewH1Fine': relerr_comb_H1Fine,
+                                        'relerrNoupH1Coarse': relerr_noup_H1Coarse,
+                                        'relerrNoupH1Fine': relerr_noup_H1Fine,
+                                        'relerrNewenergCoarse': relerr_comb_energyCoarse,
+                                        'relerrNewenergyFine': relerr_comb_energyFine,
+                                        'relerrNoupenergyCoarse': relerr_noup_energyCoarse,
+                                        'relerrNoupenergyFine': relerr_noup_energyFine,
+                                        'pList': pList})
