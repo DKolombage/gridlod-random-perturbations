@@ -38,6 +38,11 @@ def computeKmsij(TInd, a, IPatch):
     csi = lod.computeBasisCoarseQuantities(patch, correctorsList, aPatch)
     return patch, correctorsList, csi.Kmsij, csi
 
+MFull = fem.assemblePatchMatrix(world.NWorldFine, world.MLocFine)
+basis = fem.assembleProlongationMatrix(world.NWorldCoarse, world.NCoarseElement)
+bFull = basis.T * MFull * f
+faverage = np.dot(MFull * np.ones(NpFine), f)
+
 for value in def_values:
     ii = 0
     abs_error_defect = np.zeros((len(pList), NSamples))
@@ -49,11 +54,6 @@ for value in def_values:
     for p in pList:
         for N in range(NSamples):
             aPert = build_coefficient.build_inclusions_defect_2d(NFine,Nepsilon,alpha,beta,left,right,p,value)
-
-            MFull = fem.assemblePatchMatrix(world.NWorldFine, world.MLocFine)
-            basis = fem.assembleProlongationMatrix(world.NWorldCoarse, world.NCoarseElement)
-            bFull = basis.T * MFull * f
-            faverage = np.dot(MFull * np.ones(NpFine), f)
 
             #true LOD
             middle = world.NWorldCoarse[1] // 2 * world.NWorldCoarse[0] + world.NWorldCoarse[0] // 2
@@ -81,10 +81,10 @@ for value in def_values:
             abs_error_defect[ii, N] = abserror_combined_def
             rel_error_defect[ii, N] = abserror_combined_def / L2norm
 
-        rmserr = np.sqrt(1. / NSamples * np.sum(abs_error_defect[ii, :] ** 2))
+        rmserr = np.sqrt(1. / NSamples * np.sum(rel_error_defect[ii, :] ** 2))
         print("root mean square relative L2-error for new LOD over {} samples for p={} and defect value {} is: {}".
               format(NSamples, p, value, rmserr))
         ii += 1
 
     sio.savemat('_meanErr2d_defvalues' + str(value) + '.mat',
-                {'aberrDefect': abs_error_defect, 'relerrDefect': rel_error_defect, 'pList': pList})
+                {'abserrDefect': abs_error_defect, 'relerrDefect': rel_error_defect, 'pList': pList})

@@ -36,15 +36,21 @@ plt.show()
 
 # 2d random checkerboard
 
-err2d = sio.loadmat(root + '_meanErr2drandcheck.mat')
+err2d = sio.loadmat(root+'_meanErr2drandcheck.mat')
 errNew = err2d['relerrNew']
 pList2d = err2d['pList'][0]
 relL2errpert = err2d['relerrNoup']
+errNewH1Fine = err2d['relerrNewH1Fine']
+errpertH1Fine = err2d['relerrNoupH1Fine']
 rmsNew = []
+rmsNewH1Fine = []
 rmsNoup = []
+rmsNoupH1Fine = []
 NSamples = len(errNew[0, :])
 for ii in range(len(pList2d)):
     rmsNew.append(np.sqrt(1. / NSamples * np.sum(errNew[ii, :] ** 2)))
+    rmsNewH1Fine.append(np.sqrt(1. / NSamples * np.sum(errNewH1Fine[ii, :] ** 2)))
+    rmsNoupH1Fine.append(np.sqrt(1. / NSamples * np.sum(errpertH1Fine[ii, :] ** 2)))
     rmsNoup.append(np.sqrt(1. / NSamples * np.sum(relL2errpert[ii, :] ** 2)))
     if pList2d[ii] == 0.1:
         relerrUp = err2d['relerrUp'][ii]
@@ -55,12 +61,17 @@ fig = plt.figure()
 ax1 = fig.add_subplot(1, 2, 1)
 ax2 = fig.add_subplot(1, 2, 2)
 
-ax1.plot(pList2d, rmsNew, '-*')
+ax1.semilogy(pList2d, rmsNew, '-*', color='b', label='L2')
+ax1.semilogy(pList2d, rmsNewH1Fine, '-o', color='g', label='H1semi')
 ax1.set_xlabel('p')
-ax1.set_ylabel('root mean square relative $L^2$-error')
-ax2.plot(pList2d, rmsNoup, '-*')
+ax1.set_ylabel('root mean square relative errors')
+ax1.legend()
+ax2.semilogy(pList2d, rmsNoup, '-*',color='b', label='L2')
+ax2.semilogy(pList2d, rmsNoupH1Fine, '-o', color='g', label='H1semi')
 ax2.set_xlabel('p')
-ax2.set_ylabel('root mean square relative $L^2$-error')
+ax2.set_ylabel('root mean square relative errors')
+plt.yticks(ticks=[1e-2,1e-1,1e0], labels=['$10^{-2}$', '$10^{-1}$', '$10^0$'])
+ax2.legend()
 plt.show()
 
 # random defect change in value
@@ -68,13 +79,13 @@ def_values = [1., 0.5, 5.]
 colors = ['b', 'r', 'g']
 pList2d = [0.01, 0.05, 0.1, 0.15]
 for ii in range(len(def_values)):
-    err2d_value = sio.loadmat(root + '_meanErr2d_defvalues' + str(def_values[ii]) + '.mat')
+    err2d_value = sio.loadmat(root+'_meanErr2d_defvalues' + str(def_values[ii]) + '.mat')
     errNew = err2d_value['relerrDefect']
     rmsNew = []
     NSamples = len(errNew[0, :])
     for jj in range(len(pList2d)):
         rmsNew.append(np.sqrt(1. / NSamples * np.sum(errNew[jj, :] ** 2)))
-    plt.plot(pList2d, rmsNew, colors[ii] + '-o', label='value=' + str(def_values[ii]))
+    plt.semilogy(pList2d, rmsNew, colors[ii] + '-o', label='value=' + str(def_values[ii]))
 plt.legend()
 plt.xlabel('p')
 plt.ylabel('root mean square relative $L^2$-errors')
@@ -92,7 +103,7 @@ for ii in range(len(changes)):
     NSamples = len(errNew[0, :])
     for jj in range(len(pList2d)):
         rmsNew.append(np.sqrt(1. / NSamples * np.sum(errNew[jj, :] ** 2)))
-    plt.plot(pList2d, rmsNew, colors[ii] + '-o', label='model ' + str(names[ii]))
+    plt.semilogy(pList2d, rmsNew, colors[ii] + '-o', label='model ' + str(names[ii]))
 plt.legend()
 plt.xlabel('p')
 plt.ylabel('root mean square relative $L^2$-errors')

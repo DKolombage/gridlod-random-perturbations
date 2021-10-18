@@ -11,7 +11,7 @@ NpFine = np.prod(NFine+1)
 Nepsilon = np.array([128,128])
 NCoarse = np.array([32,32])
 k=4
-NSamples = 50#350
+NSamples = 250
 dim = np.size(NFine)
 
 boundaryConditions = None
@@ -44,11 +44,11 @@ relerr_noup= np.zeros((len(pList), NSamples))
 relerr_up = np.zeros((len(pList), NSamples))
 relerr_comb_H1Coarse = np.zeros((len(pList), NSamples))
 relerr_comb_H1Fine = np.zeros((len(pList), NSamples))
-relerr_comb_energyCoarse = np.zeos((len(pList), NSamples))
+relerr_comb_energyCoarse = np.zeros((len(pList), NSamples))
 relerr_comb_energyFine = np.zeros((len(pList), NSamples))
 relerr_noup_H1Coarse = np.zeros((len(pList), NSamples))
 relerr_noup_H1Fine = np.zeros((len(pList), NSamples))
-relerr_noup_energyCoarse = np.zeos((len(pList), NSamples))
+relerr_noup_energyCoarse = np.zeros((len(pList), NSamples))
 relerr_noup_energyFine = np.zeros((len(pList), NSamples))
 
 def computeKmsij(TInd, a, IPatch):
@@ -222,7 +222,7 @@ sio.savemat('_meanErr2drandcheck.mat', {'relerrNew': relerr_comb,'relerrNoup': r
                                         'relerrNewH1Fine': relerr_comb_H1Fine,
                                         'relerrNoupH1Coarse': relerr_noup_H1Coarse,
                                         'relerrNoupH1Fine': relerr_noup_H1Fine,
-                                        'relerrNewenergCoarse': relerr_comb_energyCoarse,
+                                        'relerrNewenergyCoarse': relerr_comb_energyCoarse,
                                         'relerrNewenergyFine': relerr_comb_energyFine,
                                         'relerrNoupenergyCoarse': relerr_noup_energyCoarse,
                                         'relerrNoupenergyFine': relerr_noup_energyFine,
