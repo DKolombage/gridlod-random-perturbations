@@ -115,23 +115,29 @@ pList = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11]
 indicMiddleMean = []
 errabsMean = []
 errrelMean = []
+errH1FinerelMean = []
 
 for p in pList:
-    errIndic = sio.loadmat(root + '_ErrIndic2drandcheck_p' + str(p) + '.mat')
+    errIndic = sio.loadmat('_ErrIndic2drandcheck_p' + str(p) + '.mat')
     errabsList = errIndic['absError'][0]
     errrelList = errIndic['relError'][0]
+    errH1FineList = errIndic['relErrorH1Fine'][0]
     NSamples = len(errabsList)
     IndicListmiddle = errIndic['ETListmiddle'][0]
 
     indicMiddleMean.append(np.sqrt(1. / NSamples * np.sum(IndicListmiddle ** 2)))
     errabsMean.append(np.sqrt(1. / NSamples * np.sum(errabsList ** 2)))
     errrelMean.append(np.sqrt(1. / NSamples * np.sum(errrelList ** 2)))
+    errH1FinerelMean.append(np.sqrt(1. / NSamples * np.sum(errH1FineList ** 2)))
 
 errrelMean = np.array(errrelMean)
+errH1FinerelMean = np.array(errH1FinerelMean)
 plt.figure()
 plt.plot(pList, indicMiddleMean, 'b-*', label='$E_T$')
 plt.plot(pList, errabsMean, 'r-*', label='absolute $L^2$-error')
 plt.plot(pList, errrelMean, 'g-*', label='relative $L^2$-error')
+plt.plot(pList, errH1FinerelMean, '-*', color='orange', label='relative $H^1$-error')
+plt.plot(pList, 2*errH1FinerelMean, '--*', color='orange', label='relative $H^1$-error multiplied with 2')
 plt.plot(pList, 4 * errrelMean, 'g--*', label='relative $L^2$-error multplied with $4$')
 plt.legend()
 plt.xlabel('p')
