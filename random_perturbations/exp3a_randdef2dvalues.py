@@ -68,7 +68,7 @@ for value in def_values:
             uLodCoarsetrue = basis * uFulltrue
 
             # combined LOD -- with defect value
-            KFullcombdef, _ = algorithms.compute_combined_MsStiffness(world, Nepsilon, aPert, aRefListdef, KmsijListdef,
+            KFullcombdef, _,_ = algorithms.compute_combined_MsStiffness(world, Nepsilon, aPert, aRefListdef, KmsijListdef,
                                                                       muTPrimeListdef,k,modeldef,compute_indicator=False)
             bFull = basis.T * MFull * f
             uFullcombdef, _ = lod_periodic.solvePeriodic(world, KFullcombdef, bFull, faverage, boundaryConditions)

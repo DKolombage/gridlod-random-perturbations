@@ -77,7 +77,7 @@ for model in modelList:
             L2norm = np.sqrt(np.dot(uLodCoarsetrue, MFull*uLodCoarsetrue))
 
             # combined LOD
-            KFullcombdef, _ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefListdef,KmsijListdef,
+            KFullcombdef, _ ,_= algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefListdef,KmsijListdef,
                                                                       muTPrimeListdef,k,model,compute_indicator=False)
             bFull = basis.T * MFull * f
             uFullcombdef, _ = lod_periodic.solvePeriodic(world, KFullcombdef, bFull, faverage, boundaryConditions)

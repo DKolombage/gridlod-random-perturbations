@@ -101,7 +101,7 @@ for Nc in NList:
             uLodCoarsetrue = basis * uFulltrue
 
             #combined LOD
-            KFullcomb, _ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,k,
+            KFullcomb, _,_ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,k,
                                                                    model,compute_indicator=False)
             bFull = basis.T * MFull * f
             uFullcomb, _ = lod_periodic.solvePeriodic(world, KFullcomb, bFull, faverage, boundaryConditions)
