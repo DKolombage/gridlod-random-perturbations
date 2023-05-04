@@ -4,7 +4,8 @@ import scipy.sparse as sparse
 from gridlod import fem, util
 
 class PatchPeriodic:
-    ''' Patch object in periodic setting. Adapted from non-periodic setting in gridlod.world.Patch'''
+    ''' Patch object in periodic setting. Adapted from non-periodic setting in gridlod.world.Patch
+        Di: '''
 
     def __init__(self, world, k, TInd):
         self.world = world
