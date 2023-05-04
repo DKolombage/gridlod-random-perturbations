@@ -5,13 +5,30 @@ def build_randomcheckerboard(Nepsilon, NFine, alpha, beta, p):
     # builds a random checkerboard coefficient with spectral bounds alpha and beta,
     # piece-wise constant on mesh with Nepsilon blocks
     # returns a fine coefficient on mesh with NFine blocks
+    '''Di: 
+        alpha - background const.
+        beta - defect const.
+        p - probability = const.
+        pList - 1-D array of the probabilities p.
+        Nepsilon - Number of "epsilon-blocks" on τ_ε mesh in each direction (1-D array: [x_ε, y_ε, z_ε] if 3D etc.)
+        NFine - Number of "fine-blocks" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
+        Ntepsilon - Number of ε-blocks on the wholse τ_ε mesh = const. (in array format)
+        c = determines if there exists a defect(if 1) or not (if 0) on each ε-block. = 1-D array of Ntepsilon elements with values 1 or 0.
+        values = Replaces 1 or 0 values from c with the defect coefficients beta or alpha resp. = (1-D array)
+
+        ? util.tCoordinates - what does this function do?
+    '''
     Ntepsilon = np.prod(Nepsilon)
-    c = np.random.binomial(1,p,Ntepsilon)
+    c = np.random.binomial(1,p,Ntepsilon) # Di: (1, p, Ntepsilon) = (# of trials/flips per each coin, probability of having a 1, # of performed tests (one test for each block)) 
     values = alpha + (beta-alpha) * c
 
     def randomcheckerboard(x):
-        index = (x*Nepsilon).astype(int)
-        d = np.shape(index)[1]
+        '''Di:
+            x -the position of any point with its global coordinates on the domain D. 
+            ??? Is x a single element or an array of elements?
+        '''
+        index = (x*Nepsilon).astype(int)  # Di: position coordinates of x in term of ε-blocks--> gives the lower integer bounds of the coordinates if x is not on the τ_ε grid.
+        d = np.shape(index)[1]            # ?? Di: d=1 --> 1-D case, d=2 --> 2-D case etc.
 
         if d == 1:
             flatindex = index[:]
@@ -24,38 +41,57 @@ def build_randomcheckerboard(Nepsilon, NFine, alpha, beta, p):
 
         return values[flatindex]
 
-    xFine = util.tCoordinates(NFine)
+    xFine = util.tCoordinates(NFine) # ?? Di:  XFine = nearest fine-coordinates of x in terms of fine-blocks ?
 
-    return randomcheckerboard(xFine).flatten()
+    return randomcheckerboard(xFine).flatten()  # Di: Gets the alpha,beta values on xFine blocks as a 1-D array?
 
 def build_checkerboardbasis(NPatch, NepsilonElement, NFineElement, alpha, beta):
-    # builds a list of coeeficients to combine any checkerboard coefficient
+    # builds a list of coeficients to combine any checkerboard coefficient
     # input: NPatch is number of coarse elements, NepsilonElement and NFineElement the number of cells (per dimension)
     # per coarse element for the epsilon and the fine mesh, respectively; alpha and beta are the spectral bounds of the coefficient
+    '''Di:
+        NPatch - The number of coarse elements on τ_H mesh ?? per dimension ??
+        NepsilonElement - The number of ε-blocks per dimension per coarse element
+        NFineElement - The number of fine-blocks per dimension per coarse element
+        Ntepsilon - Number of ε-blocks on the wholse τ_ε mesh = const. (in single element array format: [const.])
+        NtFine - Number of fine-blocks on the wholse τ_h mesh = const. (in single element array format)
+    '''
 
-    Nepsilon = NPatch * NepsilonElement
+    Nepsilon = NPatch * NepsilonElement  # Di: [x_ε, y_ε, z_ε] = [x_H, y_H, z_H]*[x_nε/H, y_nε/H, z_nε/H]
     Ntepsilon = np.prod(Nepsilon)
     NFine = NPatch*NFineElement
     NtFine = np.prod(NFine)
 
     def checkerboardI(ii):
-        coeff = alpha * np.ones(NtFine)
+        '''Di: 
+                convertpLinearIndexToCoordIndex(Nepsilon-1, ii)[:] ----> ???
+                util.extractElementFine(Nepsilon, NFineElement//NepsilonElement, elementIndex) -----> ???
+        '''
+        coeff = alpha * np.ones(NtFine) # Di: 1-D array of size NtFine of alpha values. [α,	α, ..., 	α] ---> α values on all fine elements
         #find out which indices on fine grid correspond to element ii on epsilon grid
-        elementIndex = util.convertpLinearIndexToCoordIndex(Nepsilon-1, ii)[:]
-        indices = util.extractElementFine(Nepsilon, NFineElement//NepsilonElement, elementIndex)
-        coeff[indices] = beta
+        elementIndex = util.convertpLinearIndexToCoordIndex(Nepsilon-1, ii)[:] # Di: ----> The corresponding ε-coordinates of element ii wrt fine-coordinates ???
+        indices = util.extractElementFine(Nepsilon, NFineElement//NepsilonElement, elementIndex) # Di: NFineElement//NepsilonElement = floor integer of number of fine-blocks per dimension per coarse element/The number of ε-blocks per dimension per coarse element
+        coeff[indices] = beta # Di: Replace ...??
         return coeff
 
-    checkerboardbasis = list(map(checkerboardI, range(Ntepsilon)))
+    checkerboardbasis = list(map(checkerboardI, range(Ntepsilon))) #Di: coeff value (alpha or beta) for each ε-block on the whole domain: A_0, A_1, ...A_(ε-1)
     checkerboardbasis.append(alpha*np.ones(NtFine))
 
     return checkerboardbasis
 
 def build_inclusions_defect_2d(NFine, Nepsilon, bg, val, incl_bl, incl_tr, p_defect, def_val=None):
     # builds a fine coefficient which is periodic with periodicity length 1/epsilon.
-    # On the unit cell, the coefficient takes the value val inside a rectangle described by  incl_bl (bottom left) and
+    # On the unit cell, the coefficient takes the value val inside a rectangle described by  incl_bl (bottom left) and             
     # incl_tr (top right), otherwise the value is bg
     # with a probability of p_defect the inclusion 'vanishes', i.e. the value is set to def_val (default: bg)
+    '''Di: incl_bl (bottom left) etc---> nodeal values?
+            bg -
+            val -
+            incl_bl -
+            incl_tr -
+            p_defect - probability of defect
+            def_val -
+    '''
 
     assert(np.all(incl_bl) >= 0.)
     assert(np.all(incl_tr) <= 1.)
@@ -65,13 +101,13 @@ def build_inclusions_defect_2d(NFine, Nepsilon, bg, val, incl_bl, incl_tr, p_def
         def_val = bg
 
     #probability of defect is p_defect
-    c = np.random.binomial(1, p_defect, np.prod(Nepsilon))
+    c = np.random.binomial(1, p_defect, np.prod(Nepsilon))   
 
-    aBaseSquare = bg*np.ones(NFine)
-    flatidx = 0
-    for ii in range(Nepsilon[0]):
-        for jj in range(Nepsilon[1]):
-            startindexcols = int((ii + incl_bl[0]) * (NFine/Nepsilon)[0])
+    aBaseSquare = bg*np.ones(NFine) # Di: bg*([1, 1])
+    flatidx = 0  # Di: ??? What does flatidx represent ???
+    for ii in range(Nepsilon[0]):          # Di: Iterate through ε-blocks on the x-axis of the rectangle
+        for jj in range(Nepsilon[1]):      # Di: Iterate through ε-blocks on the y-axis of the rectangle
+            startindexcols = int((ii + incl_bl[0]) * (NFine/Nepsilon)[0]) # ()* Number of fine-blocks per ε-block
             stopindexcols = int((ii + incl_tr[0]) * (NFine/Nepsilon)[0])
             startindexrows = int((jj + incl_bl[1]) * (NFine/Nepsilon)[1])
             stopindexrows = int((jj + incl_tr[1]) * (NFine/Nepsilon)[1])
@@ -81,7 +117,7 @@ def build_inclusions_defect_2d(NFine, Nepsilon, bg, val, incl_bl, incl_tr, p_def
                 aBaseSquare[startindexrows:stopindexrows, startindexcols:stopindexcols] = def_val
             flatidx += 1
 
-    return aBaseSquare.flatten()
+    return aBaseSquare.flatten()  # Di: 1-D array of aBaseSquare values??
 
 def build_inclusions_change_2d(NFine, Nepsilon, bg, val, incl_bl, incl_tr, p_defect, model):
     # builds a fine coefficient which is periodic with periodicity length 1/epsilon.
