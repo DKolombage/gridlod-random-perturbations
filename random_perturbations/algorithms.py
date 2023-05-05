@@ -6,12 +6,14 @@ import build_coefficient, lod_periodic, indicator
 
 
 def computeCSI_offline(world, NepsilonElement, k, boundaryConditions, model, correctors=False):
-    dim = np.size(world.NWorldFine)
+    ''' PatchPeriodic - 
+    '''
+    dim = np.size(world.NWorldFine)  # Di: Th difference between NFine and NWorldFine ?
     if dim == 2:
         middle = world.NWorldCoarse[1] // 2 * world.NWorldCoarse[0] + world.NWorldCoarse[0] // 2
     elif dim == 1:
         middle = world.NWorldCoarse[0] //2
-    patch = lod_periodic.PatchPeriodic(world, k, middle)
+    patch = lod_periodic.PatchPeriodic(world, k, middle)  
 
     tic = time.perf_counter()
     assert(model['name'] in ['check', 'incl', 'inclvalue', 'inclfill', 'inclshift', 'inclLshape'])
@@ -35,6 +37,9 @@ def computeCSI_offline(world, NepsilonElement, k, boundaryConditions, model, cor
 
 
     def computeKmsij(TInd, aPatch, k, boundaryConditions):
+        ''' Di: nodalPatchMatrix -
+                csi.muTPrime -
+        '''
         tic = time.perf_counter()
         patch = lod_periodic.PatchPeriodic(world, k, TInd)
         if dim == 1:

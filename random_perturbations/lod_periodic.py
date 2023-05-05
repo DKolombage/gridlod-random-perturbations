@@ -5,8 +5,23 @@ from gridlod import fem, util
 
 class PatchPeriodic:
     ''' Patch object in periodic setting. Adapted from non-periodic setting in gridlod.world.Patch
-        Di: world -
-            k -
+        Di: world - unit hypercube [0, 1] in 2d
+            k - 
+            TInd -
+            iElementWorldCoarse - 
+            iElementPatchCoarse -
+            iPatchWorldCoarse -
+            NWorldCoarse - Coarse mesh τ_H on [0,1], (i.e. the extent of the world in coarse elements)
+            NWorldFine - Fine mesh τ_h on [0,1], i.e. the extent of the world in fine elements)
+            NPatchCoarse -
+            NPatchFine -
+            NpFine -
+            NtFine -Number of fine-blocks on the wholse τ_h mesh = const. (in single element array format)
+            NpCoarse -
+            NtCoarse -
+
+            convertpLinearIndexToCoordIndex -
+            constraint "2*k+1 <= np.min(world.NWorldCoarse)" meaning: 
         '''
 
     def __init__(self, world, k, TInd):
@@ -41,7 +56,18 @@ class PatchPeriodic:
 def localizeCoefficient(patch, aFine, periodic=False):
     ''' localizes a coefficient aFine to patch. Optional argument whether erveything is to be interpreted in periodic
     manner. Adapted from gridlod.coef.localizeCoefficient, periodicty functionality is newly added'''
+    '''Di:
+            aFine - ??? (+ meaning aFine in README Linear storage of data??)
+            iPatchWorldFine -
+            NWorldFine -
+            NtPatchFine -
+            coarsetIndexMap -
+                What does "util.lowerLeftpIndexMap" do?
+            coarsetStartIndex -
+                What does "util.convertpCoordIndexToLinearIndex" do?
 
+                What does "util.convertpLinearIndexToCoordIndex" do?
+            '''
     iPatchWorldCoarse = patch.iPatchWorldCoarse
     NPatchCoarse = patch.NPatchCoarse
     NCoarseElement = patch.world.NCoarseElement
@@ -55,10 +81,10 @@ def localizeCoefficient(patch, aFine, periodic=False):
     coarsetIndexMap = util.lowerLeftpIndexMap(NPatchFine - 1, NWorldFine - 1)
     coarsetStartIndex = util.convertpCoordIndexToLinearIndex(NWorldFine - 1, iPatchWorldFine)
     if periodic:
-        coarsetIndCoord = (iPatchWorldFine.T + util.convertpLinearIndexToCoordIndex(NWorldFine - 1, coarsetIndexMap).T) \
-                          % NWorldFine
-        coarsetIndices = util.convertpCoordIndexToLinearIndex(NWorldFine - 1, coarsetIndCoord)
-        aFineLocalized = aFine[coarsetIndices]
+        coarsetIndCoord = (iPatchWorldFine.T + util.convertpLinearIndexToCoordIndex(NWorldFine - 1, coarsetIndexMap).T) \ 
+                          % NWorldFine # coarsetIndCoord  ???
+        coarsetIndices = util.convertpCoordIndexToLinearIndex(NWorldFine - 1, coarsetIndCoord)  # coarsetIndices??
+        aFineLocalized = aFine[coarsetIndices]  # aFineLocalized??
     else:
         aFineLocalized = aFine[coarsetStartIndex + coarsetIndexMap]
     return aFineLocalized
@@ -70,6 +96,9 @@ def assembleMsStiffnessMatrix(world, patchT, KmsijT, periodic=False):
     functionality. In the periodic case, you are also allowed to hand over just a single Kmsij if this local matrix
     is the same for every element (e.g. for periodic coefficients).
 
+    '''
+    ''' Di: 
+            Kmsij - local stifness matrix??? (Pg: 252?)
     '''
     NWorldCoarse = world.NWorldCoarse
 
