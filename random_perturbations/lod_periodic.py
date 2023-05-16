@@ -6,14 +6,14 @@ from gridlod import fem, util
 class PatchPeriodic:
     ''' Patch object in periodic setting. Adapted from non-periodic setting in gridlod.world.Patch
         Di: world - unit hypercube [0, 1] in 2d
-            k - 
-            TInd -
-            iElementWorldCoarse - 
-            iElementPatchCoarse -
+            k - Number of layers in the patch
+            TInd - Index of an element T in terms of coarse mesh τ_H 
+            iElementWorldCoarse - The index of the element wrt the coarse grid
+            iElementPatchCoarse - The index (of the bottom left corner of the patch)
             iPatchWorldCoarse -
-            NWorldCoarse - Coarse mesh τ_H on [0,1], (i.e. the extent of the world in coarse elements)
-            NWorldFine - Fine mesh τ_h on [0,1], i.e. the extent of the world in fine elements)
-            NPatchCoarse -
+            NWorldCoarse - Number of Coarse elements on the coarse mesh τ_H on [0,1]i.e. extended through the whole world, (i.e. the extent of the world in coarse elements)---> an array, numbers per each dimension
+            NWorldFine - Number of Fine elements on the fine mesh τ_h on [0,1] over he whole world, i.e. the extent of the world in fine elements)---> Numbers per each dimension
+            NPatchCoarse - 
             NPatchFine -
             NpFine -
             NtFine -Number of fine-blocks on the wholse τ_h mesh = const. (in single element array format)
@@ -21,7 +21,7 @@ class PatchPeriodic:
             NtCoarse -
 
             convertpLinearIndexToCoordIndex -
-            constraint "2*k+1 <= np.min(world.NWorldCoarse)" meaning: 
+            constraint "2*k+1 <= np.min(world.NWorldCoarse)" : 
         '''
 
     def __init__(self, world, k, TInd):
@@ -57,7 +57,8 @@ def localizeCoefficient(patch, aFine, periodic=False):
     ''' localizes a coefficient aFine to patch. Optional argument whether erveything is to be interpreted in periodic
     manner. Adapted from gridlod.coef.localizeCoefficient, periodicty functionality is newly added'''
     '''Di:
-            aFine - ??? (+ meaning aFine in README Linear storage of data??)
+            When we hand over the Patch U_k(T) and a coefficient 'aFine' over the whole domain, this function extracts the coefficient 'aFine|_(U_k(T))' resstricted to the path U_k(T).
+            aFine - a coefficient over the whole domain---> a vector of the size = number of fine elements
             iPatchWorldFine -
             NWorldFine -
             NtPatchFine -
@@ -81,10 +82,10 @@ def localizeCoefficient(patch, aFine, periodic=False):
     coarsetIndexMap = util.lowerLeftpIndexMap(NPatchFine - 1, NWorldFine - 1)
     coarsetStartIndex = util.convertpCoordIndexToLinearIndex(NWorldFine - 1, iPatchWorldFine)
     if periodic:
-        coarsetIndCoord = (iPatchWorldFine.T + util.convertpLinearIndexToCoordIndex(NWorldFine - 1, coarsetIndexMap).T) \ 
-                          % NWorldFine # coarsetIndCoord  ???
-        coarsetIndices = util.convertpCoordIndexToLinearIndex(NWorldFine - 1, coarsetIndCoord)  # coarsetIndices??
-        aFineLocalized = aFine[coarsetIndices]  # aFineLocalized??
+        coarsetIndCoord = (iPatchWorldFine.T + util.convertpLinearIndexToCoordIndex(NWorldFine - 1, coarsetIndexMap).T) \
+                          % NWorldFine
+        coarsetIndices = util.convertpCoordIndexToLinearIndex(NWorldFine - 1, coarsetIndCoord)  
+        aFineLocalized = aFine[coarsetIndices]  
     else:
         aFineLocalized = aFine[coarsetStartIndex + coarsetIndexMap]
     return aFineLocalized
@@ -98,7 +99,8 @@ def assembleMsStiffnessMatrix(world, patchT, KmsijT, periodic=False):
 
     '''
     ''' Di: 
-            Kmsij - local stifness matrix??? (Pg: 252?)
+            Kmsij - local stifness matrix
+            KmsijT - element wise stiffness matrix
     '''
     NWorldCoarse = world.NWorldCoarse
 
