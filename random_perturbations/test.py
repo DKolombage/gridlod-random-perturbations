@@ -75,15 +75,14 @@ def compute_eigen_vals(NFine, Nepsilon, NCoarse, k, NSamples, world, pList):
                 correctorsTtrue = tuple(correctorsTtrue)
                 modbasistrue = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsTtrue, periodic=True)
 
-        Mass = fem.assemblePatchMatrix(world.NWorldCoarse, world.MLocCoarse) # Fix for Periodic BC
+        FEM_Mass = fem.assemblePatchMatrix(world.NWorldCoarse, world.MLocCoarse) # Fix for Periodic BC
 
     # Compute for eigen values
-        evals, evecs = eigh(KFulltrue, Mass)
+        evals, evecs = eigh(KFulltrue, FEM_Mass)
     return evals
 
 compute_eigen_vals(NFine, Nepsilon, NCoarse, k, NSamples, world, pList)
-# Assemble Mass matrices with Periodic B.C.
 
 # FEM Stiffness and mass matrices
-# AFull = fem.assemblePatchMatrix(world.NWorldFine, world.ALocFine, aPert)
-# Mass = fem.assemblePatchMatrix(world.NWorldFine, world.MLocFine)
+    # AFull = fem.assemblePatchMatrix(world.NWorldFine, world.ALocFine, aPert)
+    # Mass = fem.assemblePatchMatrix(world.NWorldFine, world.MLocFine)
