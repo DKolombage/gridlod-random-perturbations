@@ -6,90 +6,103 @@ from numpy.linalg import norm
 import matplotlib.pyplot as plt
 from mpltools import annotation
 
-#Compute exact or reference eigen values
-def compute_reference_eig(Neigen=Neigen, exact=False, ref_solver=None): #NCoarse=NCoarse, NFine=NFine, NSamples=None, pList=pList,
-    if exact:
-        eigenvalues = []
-        for i in range(Neigen+1):
-            if (i%2)==0:
-                eig = (i**2)*math.pi**2
-            else: 
-                eig = ((i-1)**2)*math.pi**2
-            eigenvalues.append(eig)
-        return eigenvalues[2::] #return  print('Exact Eigenvalues:\n', eigenvalues[1::])                             
-    else: # add for reference solver when exact is non-callable in higher dimensions
-        eigenvalues = FEM_EigenSolver(Neigen, np.array([64]), np.array([256]), np.array([128]))
-        return eigenvalues
-    
-C= compute_reference_eig(Neigen=3, exact=False, ref_solver=None)
-print('c',C)
 
-def convergence(Neigen, NCoarse, return_errors=False):
-    errors = []
-    N = 4
-    Nlines = 3
-    approx = []
+def convergence(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, reference_solver="FEM", save_files = True, plot=True, root=None):
+
+    Niter = 4
     NC_list = []
-    #NCoarse = np.array([8])
-    #print('NC_list n\:', NC_list)
-    #L=np.array([8, 16
-    # ,32, 64,128])
-    for i in range(N):
+    rmserr_p_λ1 = []
+    rmserr_p_λ2=[]
+
+    for j in range(Niter):
         NCoarse *= 2
-        ref_eigenvalues = compute_reference_eig(Neigen)
-        print('Reference values:\n', ref_eigenvalues)
-        approx_eigenvalues = KLOD_MFEM_EigenSolver(NCoarse)
-        # app = approx_eigenvalues[1:]
-        print('approx:\n', approx_eigenvalues)
-        approx.append(approx_eigenvalues)
-        error = abs(ref_eigenvalues- approx_eigenvalues)
-        errors.append(error)
+        if reference_solver == "FEM":
+            KLOD_λ1, KLOD_λ2 = KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=False)
+            FEM_λ1, FEM_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=False)
+            absErrorList_λ1 = abs(KLOD_λ1-FEM_λ1)  # p in rows and Nsamples in columns
+            absErrorList_λ2 = abs(KLOD_λ2-FEM_λ2)
+
+        elif reference_solver == "exact":
+            Exact_λ = Exact_EigenSolver(Neigen)
+            absErrorList_λ1 = abs(KLOD_λ1-Exact_λ)  # p in rows and Nsamples in columns
+            absErrorList_λ2 = abs(KLOD_λ2-Exact_λ)
+        else:
+            print("Unrecognized reference solver!")
+
+        rmserr_λ1 = np.sqrt(1. / NSamples * np.sum(absErrorList_λ1** 2, axis = 1))
+        rmserr_λ2 = np.sqrt(1. / NSamples * np.sum(absErrorList_λ2** 2, axis = 1))
+        rmserr_p_λ1.append(rmserr_λ1)
+        rmserr_p_λ2.append(rmserr_λ2)
+        #print("rmsp1", rmserr_p_λ1)
+        #print("rmsp2", rmserr_p_λ2)
         NC_list.append(np.copy(NCoarse[0]))
-    print('NC_list n\:', NC_list)
-    print('Approx list:\n', approx)
-    print('Error list \n',errors)
-    err = np.array(errors);
-    print(err);
-    ax=plt.figure().add_subplot()
-    #ax = plt.figure().add_subplot()
-    ax.loglog(NC_list, err[:,0], label='$λ_1$', marker='>')
-    ax.loglog(NC_list, err[:,1], label='$λ_2$', marker='<')
-    for j in range(1, Nlines+1):
-        ax.loglog(NC_list, [err[0]*0.5**(i*j) for i in range(N)], lw = 0.5, color="grey")
-    #axes = plt.gca()
-    NC_list_mid = np.convolve(NC_list, [0.5, 0.5], mode='valid')
-    err_mid = np.interp(NC_list_mid, NC_list, err[:,0])
-    grad1 = np.diff(err[:,0])/np.diff(NC_list)
-    for xm, ym, g in zip(NC_list_mid, err_mid, grad1):
-        annotation.slope_marker((xm,ym), g)
-    ax.set_xlabel("Number of Coarse steps")
-    ax.set_ylabel("abs. error")
-    ax.set_title("Convergence")
-    ax.legend(loc='best')
-    plt.show()
-    if return_errors == False:
-        return  
-    else:
-        return errors
-#A=convergence(3, np.array([8]), return_errors = True)
-#print(A)
+        #print(NC_list)
 
-NCoarse=np.array([8])
-def EOC(NCoarse):
-    Errors_List = np.array(convergence(3, np.array([8]), return_errors = True))
-    NMeshRefinements = len(Errors_List[:,0])
-    Nlist = np.array([2*np.array([8]), 4*np.array([8]), 8*np.array([8]), 16*np.array([8])])
-    print(Nlist)
-    #for i in range(NMeshRefinements):
-    #    NCoarse = NCoarse*2
-    #    Nlist.append(NCoarse[0])
-    Alpha_list = []
-    for i in range(NMeshRefinements-1):
-        EOC_values = (np.log10((Errors_List[i]/Errors_List[i+1])))/(np.log10(Nlist[i]/Nlist[i+1]))
-        Alpha_list.append(EOC_values)
-    return print("EoC: \n",Alpha_list), Nlist
-E = EOC(np.array([8]))
-print(E)
-#C=compute_reference_eig(Neigen=10, exact=True)
-#print('exact', C)
+        if save_files:
+            if not root == None:
+                sio.savemat(root + '_pList_NCList'+'.mat', {'pList': pList, 'NC_list': NC_list})
+                sio.savemat(root + '_meanErr_H' + str(NCoarse[0]) + '.mat', {'absErr_1': absErrorList_λ1, 'absErr_2': absErrorList_λ2, 'pList': pList})
+            else: 
+                sio.savemat('_pList_NCList'+'.mat', {'pList': pList, 'NC_list': NC_list})
+                sio.savemat('_meanErr_H' + str(NCoarse[0]) + '.mat', {'absErr_1': absErrorList_λ1, 'absErr_2': absErrorList_λ2, 'pList': pList})
+    #print("check2", NC_list)
+    err1 = np.array(rmserr_p_λ1)
+    err2 = np.array(rmserr_p_λ2)
+    #print("err1", err1)
 
+    if save_files: 
+        if not root == None:
+            sio.savemat(root + '_RMSErr_H'  + '.mat', {'rmserr_lamb1': err1, 'rmserr_lamb2': err2, 'pList': pList, 'NC_list': NC_list})
+        else:
+            sio.savemat('_RMSErr_H'  + '.mat', {'rmserr_lamb1': err1, 'rmserr_lamb2': err2, 'pList': pList, 'NC_list': NC_list})
+    if plot:
+        ax1=plt.figure().add_subplot()
+        ax2=plt.figure().add_subplot()
+        #ax3 =plt.figure().add_subplot()
+        for i in range(len(pList)):
+            labelplain = 'p={' + str(pList[i]) + '}'
+            ax1.loglog(NC_list, err1[:,i], label=r'${}$'.format(labelplain), marker='>')
+            ax2.loglog(NC_list, err2[:,i], label=r'${}$'.format(labelplain), marker='<')
+        ax1.legend()
+        ax2.legend()
+        #ax3.legend()
+        ax1.set_xlabel('$H^{-1}$')
+        ax1.set_ylabel('Root Mean squard error of $λ_1$')
+        ax2.set_xlabel('$H^{-1}$')
+        ax2.set_ylabel('Root Mean squard error of $λ_2$')
+        plt.show()
+
+        fig = plt.figure()
+        ax4 = fig.add_subplot(1, 2, 1)
+        ax5 = fig.add_subplot(1, 2, 2)
+
+        i = -2
+        print("Hplot", NC_list)
+        for N in NC_list:
+            if not root == None:
+                err = sio.loadmat(root + '_meanErr_H' + str(N) + '.mat')
+            else:
+                err = sio.loadmat('_meanErr_H' + str(N) + '.mat')
+            Error_λ1 = err['absErr_1']
+            pList = err['pList'][0]
+            Error_λ2 = err['absErr_2']
+            NSamples = len(Error_λ2[0, :])
+            rms_λ1 = []
+            rms_λ2 = []
+            for ii in range(len(pList)):
+                rms_λ1.append(np.sqrt(1. / NSamples * np.sum(Error_λ1[ii, :] ** 2)))
+                rms_λ2.append(np.sqrt(1. / NSamples * np.sum(Error_λ2[ii, :] ** 2)))
+            labelplain = 'H=2^{' + str(i) + '}'
+            ax4.plot(pList, rms_λ1, '-*', label=r'${}$'.format(labelplain))
+            ax5.plot(pList, rms_λ2, '-*', label=r'${}$'.format(labelplain))
+            i -= 1
+        ax4.legend()
+        ax5.legend()
+        ax4.set_xlabel('p')
+        ax4.set_ylabel('root means square error of $λ_1$')
+        ax5.set_xlabel('p')
+        ax5.set_ylabel('root means square error of $λ_2$')
+        plt.show()
+    return print("Root mean square absolute error of λ1:\n", err1), print("Root mean square absolute error of λ2: \n", err2) #err1, err2 , NC_list #
+
+   

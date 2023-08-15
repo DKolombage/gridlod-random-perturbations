@@ -7,19 +7,8 @@ import sys
 sys.path.insert(0, '/home/kolombag/Documents/gridlod-random-perturbations/random_perturbations')
 import build_coefficient, lod_periodic
                    
-alpha = 0.1
-beta = 0.5
-NSamples = 1
-pList = [ 0.9] #[1]#
-model ={'name': 'check', 'alpha': alpha, 'beta': beta}
-NFine = np.array([256])    # Number of "fine-blocks" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
-Nepsilon = np.array([128])    # Number of "epsilon-blocks" on τ_ε mesh in each direction (1-D array: [x_ε, y_ε, z_ε] if 3D etc.)     # Number of "coarse-blocks" on τ_H mesh in each direction (1-D array: [x_H, y_H, z_H]) # Number of layers in the patch 
-Neigen = 3
-k = 1
-np.random.seed(123)
-#NCoarse = np.array([64])
 
-def KLOD_MFEM_EigenSolver(NCoarse, NFine=NFine, Nepsilon=Nepsilon, k=k, alpha=alpha, beta=beta, NSamples=NSamples, pList=pList,Neigen=Neigen):
+def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=True):
       
         NpFine = np.prod(NFine+1)     # Number of "fine-nodes" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
         NpCoarse = np.prod(NCoarse+1) 
@@ -50,7 +39,11 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine=NFine, Nepsilon=Nepsilon, k=k, alpha=al
         computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
         patchT = list(map(computePatch, range(world.NtCoarse)))
 
-        for p in pList:
+        KLOD_λ1 = np.zeros((len(pList), NSamples))
+        KLOD_λ2 = np.zeros((len(pList), NSamples))
+
+        for ii in range(len(pList)):
+                p = pList[ii]
                 for N in range(NSamples):
                         aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
                         #print('CoeffListSize:',aPert.size)
@@ -95,7 +88,7 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine=NFine, Nepsilon=Nepsilon, k=k, alpha=al
                                 fixed_DoF = np.concatenate((np.arange(NCoarse[1] * (NCoarse[0] + 1), NpCoarse), 
                                                                 np.arange(NCoarse[0], NpCoarse - 1, NCoarse[0] + 1)))    # All the abandoning boundary points
                                 #print('fixed_size:',fixed_DoF.size)
-                                print('fixed: \n', fixed_DoF)
+                                #print('fixed: \n', fixed_DoF)
                                 #print('fixed_shape:', fixed_DoF.shape)
                                 free_DoF = np.setdiff1d(np.arange(NpCoarse), fixed_DoF)  # Rest of the nodal indices 
                                 KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]         # Array after BC applied
@@ -132,8 +125,10 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine=NFine, Nepsilon=Nepsilon, k=k, alpha=al
 
                                 MFEM_Free_DoF = MFEM[free_DoF][:, free_DoF]
 
-        evals, evecs = ln.eigsh(KLOD_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.00, which='LM', return_eigenvectors = True, tol=1E-2) # v0, (Stiff_Matrix, Number of e.values needed, Mass_Matrix), 
-        return evals[1::]
+                        evals, evecs = ln.eigsh(KLOD_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-2) # v0, (Stiff_Matrix, Number of e.values needed, Mass_Matrix), 
+                        KLOD_λ1[ii, N] = evals[1]
+                        KLOD_λ2[ii, N] = evals[2]
+        if save_file:
+                sio.savemat('KLOD_Eigenvalues' + '.mat', {'KLOD_1st_Evalue': KLOD_λ1, 'KLOD_2nd_Evalue': KLOD_λ2, 'pList': pList})
+        return KLOD_λ1, KLOD_λ2
 
-#A = KLOD_MFEM_EigenSolver(NCoarse=NCoarse, NFine=NFine, Nepsilon=Nepsilon, k=k, alpha=alpha, beta=beta, NSamples=NSamples, pList=pList,Neigen=Neigen)
-#print('LOD:\n ', A)
