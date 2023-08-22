@@ -1,61 +1,167 @@
 import numpy as np
+import scipy.io as sio
+import scipy.sparse.linalg as ln
 import time
+from gridlod.world import World
+from gridlod import util, fem, lod, interp
 
 from gridlod import interp, lod
-import build_coefficient, lod_periodic, indicator
+import sys
+sys.path.insert(0, '/home/kolombag/Documents/gridlod-random-perturbations/random_perturbations')
+import build_coefficient, lod_periodic, indicator, algorithms
 
+def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, model, save_file=True):
+    NpFine = np.prod(NFine+1)     # Number of "fine-nodes" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
+    NpCoarse = np.prod(NCoarse+1) 
+    dim = np.size(NFine)
+    
+    boundaryConditions = None
+    percentage_comp = 0.15
+    np.random.seed(123)
 
+    NCoarseElement = NFine // NCoarse
+    world = World(NCoarse, NCoarseElement, boundaryConditions)
+    xpFine = util.pCoordinates(NFine)
 
-def computeCSI_offline(world, NepsilonElement, k, boundaryConditions, model, correctors=False):
-    ''' PatchPeriodic - 
-    '''
-    dim = np.size(world.NWorldFine)  # Di: Th difference between NFine and NWorldFine ?
-    if dim == 2:
-        middle = world.NWorldCoarse[1] // 2 * world.NWorldCoarse[0] + world.NWorldCoarse[0] // 2
-    elif dim == 1:
-        middle = world.NWorldCoarse[0] //2
-    patch = lod_periodic.PatchPeriodic(world, k, middle)  
-
-    tic = time.perf_counter()
-    assert(model['name'] in ['check', 'incl', 'inclvalue', 'inclfill', 'inclshift', 'inclLshape'])
-    if model['name'] == 'check':
-        aRefList = build_coefficient.build_checkerboardbasis(patch.NPatchCoarse, NepsilonElement,
-                                                             world.NCoarseElement, model['alpha'], model['beta'])
-    elif model['name'] == 'incl':
-        aRefList = build_coefficient.build_inclusionbasis_2d(patch.NPatchCoarse,NepsilonElement, world.NCoarseElement,
-                                                             model['bgval'], model['inclval'], model['left'], model['right'])
-    elif model['name'] == 'inclvalue':
-        aRefList = build_coefficient.build_inclusionbasis_2d(patch.NPatchCoarse, NepsilonElement, world.NCoarseElement,
-                                                             model['bgval'], model['inclval'], model['left'],
-                                                             model['right'], model['defval'])
-    elif model['name'] in ['inclfill', 'inclshift', 'inclLshape']:
-        aRefList = build_coefficient.build_inclusionbasis_change_2d(patch.NPatchCoarse, NepsilonElement, world.NCoarseElement,
-                                                             model['bgval'], model['inclval'], model['left'],
-                                                             model['right'], model)
-
-    toc = time.perf_counter()
-    time_basis = toc-tic
-
-    def computeKmsij(TInd, aPatch, k, boundaryConditions):
-        ''' Di: nodalPatchMatrix -
-                csi.muTPrime -
-        '''
-        tic = time.perf_counter()
+    def computeKmsij(TInd, a, IPatch):
         patch = lod_periodic.PatchPeriodic(world, k, TInd)
-        if dim == 1:
-            IPatch = lambda: interp.nodalPatchMatrix(patch)
-        else:
-            IPatch = lambda: interp.L2ProjectionPatchMatrix(patch, boundaryConditions)
+        aPatch = lod_periodic.localizeCoefficient(patch,a, periodic=True)
 
         correctorsList = lod.computeBasisCorrectors(patch, IPatch, aPatch)
         csi = lod.computeBasisCoarseQuantities(patch, correctorsList, aPatch)
-        toc = time.perf_counter()
-        return patch, correctorsList, csi.Kmsij, csi.muTPrime, toc-tic
+        return patch, correctorsList, csi.Kmsij, csi
 
-    computeSingleKms = lambda aRef: computeKmsij(middle, aRef, k, boundaryConditions)
-    if correctors:
-        _, correctorsList, KmsijList, muTPrimeList, timeMatrixList = zip(*map(computeSingleKms, aRefList))
-        return aRefList, KmsijList, muTPrimeList, time_basis, timeMatrixList, correctorsList
-    else:
-        _, _, KmsijList, muTPrimeList, timeMatrixList = zip(*map(computeSingleKms, aRefList))
-        return aRefList, KmsijList, muTPrimeList, time_basis, timeMatrixList
+    aRefList, KmsijList, muTPrimeList, timeBasis, timeMatrixList = algorithms.computeCSI_offline(world, Nepsilon // NCoarse,k,boundaryConditions,model,correctors=False)  
+    #print(aRefList)                                                           
+    aRef = np.copy(aRefList[-1])
+    KmsijRef = np.copy(KmsijList[-1])
+    muTPrimeRef = muTPrimeList[-1]
+    #correctorsRef = correctorsList[-1]
+    basis = fem.assembleProlongationMatrix(world.NWorldCoarse, world.NCoarseElement)
+    computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
+    patchT = list(map(computePatch, range(world.NtCoarse)))
+    KFullpert = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijRef, periodic=True)
+    KLOD_λ1 = np.zeros((len(pList), NSamples))
+    KLOD_λ2 = np.zeros((len(pList), NSamples))
+
+    for ii in range(len(pList)):
+        p = pList[ii]
+        for N in range(NSamples):
+            aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
+            #print('CoeffListSize:',aPert.size)
+            #print('CoeffList: \n', aPert)
+
+            #true LOD
+            if dim == 2:
+                middle = world.NWorldCoarse[1] // 2 * world.NWorldCoarse[0] + world.NWorldCoarse[0] // 2
+            else: 
+                middle = NCoarse[0] // 2
+                    
+            patchRef = lod_periodic.PatchPeriodic(world, k, middle)
+            IPatch = lambda: interp.L2ProjectionPatchMatrix(patchRef)
+            computeKmsijT = lambda TInd: computeKmsij(TInd, aPert, IPatch)     
+
+            patchT, correctorsTtrue, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
+
+            KFulltrue = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijTtrue, periodic=True)
+
+            #combined LOD
+            KFullcomb, _,_ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,k,
+                                                                   model,compute_indicator=False)
+            correctorsTtrue = tuple(correctorsTtrue)
+            modbasistrue = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsTtrue, periodic=True)
+
+            KFullpertup, _ = algorithms.compute_perturbed_MsStiffness(world, aPert, aRef, KmsijRef, muTPrimeRef, k,
+                                                                      percentage_comp)
+            # FEM Mass Matrix
+            MFEM = fem.assemblePatchMatrix(world.NWorldCoarse, world.MLocCoarse) 
+
+            if dim == 2:
+                KFulltrue.tolil()
+                KFulltrue[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
+                        += KFulltrue[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]         # Wrap the LHS-RHS-row values together at LHS-mesh boundary points
+                KFulltrue[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
+                        += KFulltrue[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]    # Wrap the LHS-RHS-column values together at LHS-mesh boundary points
+                KFulltrue[np.arange(NCoarse[0]+1), :] += KFulltrue[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]          # Wrap the Bottom - top row-values together at BOTTOM-mesh boundary points 
+                KFulltrue[:, np.arange(NCoarse[0] + 1)] += KFulltrue[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]  # Wrap the Bottom - top column-values together at BOTTOM-mesh boundary points
+                KFulltrue.tocsc()
+
+                fixed_DoF = np.concatenate((np.arange(NCoarse[1] * (NCoarse[0] + 1), NpCoarse), 
+                                                np.arange(NCoarse[0], NpCoarse - 1, NCoarse[0] + 1)))    # All the abandoning boundary points
+                free_DoF = np.setdiff1d(np.arange(NpCoarse), fixed_DoF)  # Rest of the nodal indices 
+                KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]         # Array after BC applied
+
+                KFullcomb.tolil()
+                KFullcomb[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
+                        += KFullcomb[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]         # Wrap the LHS-RHS-row values together at LHS-mesh boundary points
+                KFullcomb[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
+                        += KFullcomb[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]    # Wrap the LHS-RHS-column values together at LHS-mesh boundary points
+                KFullcomb[np.arange(NCoarse[0]+1), :] += KFullcomb[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]          # Wrap the Bottom - top row-values together at BOTTOM-mesh boundary points 
+                KFullcomb[:, np.arange(NCoarse[0] + 1)] += KFullcomb[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]  # Wrap the Bottom - top column-values together at BOTTOM-mesh boundary points
+                KFullcomb.tocsc()
+                fixed_DoF = np.concatenate((np.arange(NCoarse[1] * (NCoarse[0] + 1), NpCoarse), 
+                                                np.arange(NCoarse[0], NpCoarse - 1, NCoarse[0] + 1)))    # All the abandoning boundary points
+                free_DoF = np.setdiff1d(np.arange(NpCoarse), fixed_DoF)  # Rest of the nodal indices 
+                KOOLOD_Free_DoF = KFullcomb[free_DoF][:, free_DoF]  
+
+                KFullpertup.tolil()
+                KFullpertup[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
+                        += KFullcomb[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]         # Wrap the LHS-RHS-row values together at LHS-mesh boundary points
+                KFullpertup[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
+                        += KFullpertup[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]    # Wrap the LHS-RHS-column values together at LHS-mesh boundary points
+                KFullpertup[np.arange(NCoarse[0]+1), :] += KFullpertup[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]          # Wrap the Bottom - top row-values together at BOTTOM-mesh boundary points 
+                KFullpertup[:, np.arange(NCoarse[0] + 1)] += KFullpertup[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]  # Wrap the Bottom - top column-values together at BOTTOM-mesh boundary points
+                KFullpertup.tocsc()
+                KOOLOD_pert_Free_DoF = KFullpertup[free_DoF][:, free_DoF]  
+
+                MFEM.tolil()
+                MFEM[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
+                        += MFEM[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]
+                MFEM[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
+                        += MFEM[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]
+                MFEM[np.arange(NCoarse[0]+1), :] += MFEM[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]
+                MFEM[:, np.arange(NCoarse[0] + 1)] += MFEM[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]
+                MFEM.tocsc()
+                MFEM_Free_DoF = MFEM[free_DoF][:, free_DoF]
+            else:
+                KFulltrue.tolil()
+                KFulltrue[0] += KFulltrue[-1]
+                KFulltrue[:,0] += KFulltrue[:,-1]
+                KFulltrue.tocsc() 
+
+                fixed_DoF = np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)
+                free_DoF = np.setdiff1d(np.arange(NpCoarse-1), fixed_DoF)
+                KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]
+
+                KFullcomb.tolil()
+                KFullcomb[0] += KFullcomb[-1]
+                KFullcomb[:,0] += KFullcomb[:,-1]
+                KFullcomb.tocsc() 
+
+                fixed_DoF = np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)
+                free_DoF = np.setdiff1d(np.arange(NpCoarse-1), fixed_DoF)
+                KOOLOD_Free_DoF = KFullcomb[free_DoF][:, free_DoF]
+
+                KFullpertup.tolil()
+                KFullpertup[0] += KFullpertup[-1]
+                KFullpertup[:,0] += KFullpertup[:,-1]
+                KFullpertup.tocsc() 
+
+                fixed_DoF = np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)
+                free_DoF = np.setdiff1d(np.arange(NpCoarse-1), fixed_DoF)
+                KOOLOD_pert_Free_DoF = KFullpertup[free_DoF][:, free_DoF]
+
+                MFEM.tolil()
+                MFEM[0] += MFEM[-1]
+                MFEM[:,0] += MFEM[:,-1]
+                MFEM.tocsc() 
+
+                MFEM_Free_DoF = MFEM[free_DoF][:, free_DoF]
+
+            evals, evecs = ln.eigsh(KOOLOD_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) # v0, (Stiff_Matrix, Number of e.values needed, Mass_Matrix), 
+            KLOD_λ1[ii, N] = evals[1]
+            KLOD_λ2[ii, N] = evals[2]
+        if save_file:
+            sio.savemat('KLOD_Eigenvalues' + '.mat', {'KLOD_1st_Evalue': KLOD_λ1, 'KLOD_2nd_Evalue': KLOD_λ2, 'pList': pList})
+    return KLOD_λ1, KLOD_λ2 #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
+

@@ -5,7 +5,10 @@ def EOC(NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, Neigen, root = 
     Alpha_list_Lam1 = []
     Alpha_list_Lam2 = []
     if use_stored_data == True:
-        data_array = sio.loadmat( root + '_RMSErr_H' + '.mat')
+        if not root == None:
+            data_array = sio.loadmat( root + '_RMSErr_H' + '.mat')
+        else:
+            data_array = sio.loadmat('_RMSErr_H' + '.mat')
         Errors_List_Lam1 = data_array['rmserr_lamb1']
         Errors_List_Lam2 = data_array['rmserr_lamb2']
         NC_list = data_array['NC_list'][0]

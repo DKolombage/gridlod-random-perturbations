@@ -22,8 +22,6 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pL
         world = World(NCoarse, NCoarseElement, boundaryConditions)
         xpFine = util.pCoordinates(NFine)
 
-        NpFine = np.prod(NFine+1) 
-
         def computeKmsij(TInd, a, IPatch):
                 patch = lod_periodic.PatchPeriodic(world, k, TInd)
                 aPatch = lod_periodic.localizeCoefficient(patch,a, periodic=True)
@@ -34,8 +32,6 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pL
 
         # LOD for deterministic coeffcient - no updates
         basis = fem.assembleProlongationMatrix(world.NWorldCoarse, world.NCoarseElement)
-        #MFull = fem.assemblePatchMatrix(world.NWorldFine, world.MLocFine)
-        #MgradFull = fem.assemblePatchMatrix(world.NWorldFine, world.ALocFine)
         computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
         patchT = list(map(computePatch, range(world.NtCoarse)))
 
@@ -46,8 +42,6 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pL
                 p = pList[ii]
                 for N in range(NSamples):
                         aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
-                        #print('CoeffListSize:',aPert.size)
-                        #print('CoeffList: \n', aPert)
 
                         #true LOD
                         if dim == 2:
@@ -60,20 +54,11 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pL
                         computeKmsijT = lambda TInd: computeKmsij(TInd, aPert, IPatch)     
 
                         patchT, correctorsTtrue, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
-                        #print('KTtrue: \n', KmsijTtrue)
-                        #print('KmsijTtrue:', len(KmsijTtrue))
                         KFulltrue = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijTtrue, periodic=True)
-                        #print('Kshape:', KFulltrue.shape)
-                        #print('Ksize:', KFulltrue.size)
-                        #print('K: \n', KFulltrue)
                         correctorsTtrue = tuple(correctorsTtrue)
                         modbasistrue = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsTtrue, periodic=True)
 
-                        # FEM Mass Matrix
                         MFEM = fem.assemblePatchMatrix(world.NWorldCoarse, world.MLocCoarse) 
-                        #print('FEM1 \n', MFEM)
-                        #print(MFEM.size)
-                        #print('M: \n', MFEM.shape)
 
                         if dim == 2:
                                 KFulltrue.tolil()
@@ -87,26 +72,18 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pL
 
                                 fixed_DoF = np.concatenate((np.arange(NCoarse[1] * (NCoarse[0] + 1), NpCoarse), 
                                                                 np.arange(NCoarse[0], NpCoarse - 1, NCoarse[0] + 1)))    # All the abandoning boundary points
-                                #print('fixed_size:',fixed_DoF.size)
-                                #print('fixed: \n', fixed_DoF)
-                                #print('fixed_shape:', fixed_DoF.shape)
                                 free_DoF = np.setdiff1d(np.arange(NpCoarse), fixed_DoF)  # Rest of the nodal indices 
                                 KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]         # Array after BC applied
-                                #print('KLOD_Free_DoF:', KLOD_Free_DoF.shape)
+         
 
                                 MFEM.tolil()
-                                #print('Mlil: \n', MFEM.tolil())
                                 MFEM[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
                                         += MFEM[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]
-                                #print('M2: \n', MFEM.shape)
                                 MFEM[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
                                         += MFEM[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]
                                 MFEM[np.arange(NCoarse[0]+1), :] += MFEM[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]
                                 MFEM[:, np.arange(NCoarse[0] + 1)] += MFEM[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]
-                                #print('Mshape:', MFEM.shape)
                                 MFEM.tocsc()
-                                #print(MFEM.size)
-                                #print('M: \n', MFEM.tocsc)
                                 MFEM_Free_DoF = MFEM[free_DoF][:, free_DoF]
                         else:
                                 KFulltrue.tolil()

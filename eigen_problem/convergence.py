@@ -5,9 +5,13 @@ from numpy import *
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
 from mpltools import annotation
+from offline_online_alg import *
 
 
-def convergence(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, reference_solver="FEM", save_files = True, plot=True, root=None):
+#def solve_EVP(*solver, Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, model, reference_solver="FEM", save_files = True, plot=True, root=None):
+
+
+def convergence(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, model, solver , reference_solver="FEM", save_files = True, plot=True, root=None):
 
     Niter = 4
     NC_list = []
@@ -16,16 +20,28 @@ def convergence(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta,
 
     for j in range(Niter):
         NCoarse *= 2
-        if reference_solver == "FEM":
-            KLOD_λ1, KLOD_λ2 = KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=False)
-            FEM_λ1, FEM_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=False)
-            absErrorList_λ1 = abs(KLOD_λ1-FEM_λ1)  # p in rows and Nsamples in columns
-            absErrorList_λ2 = abs(KLOD_λ2-FEM_λ2)
+        if reference_solver == "FEM" and solver == "KOOLOD":
+            K_λ1, K_λ2 = KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, model, save_file=False) #KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=False)
+            M_λ1, M_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=False)
+            absErrorList_λ1 = abs(K_λ1-M_λ1)  # p in rows and Nsamples in columns
+            absErrorList_λ2 = abs(K_λ2-M_λ2)
+
+        elif reference_solver == "FEM" and solver == "LOD":
+            K_λ1, K_λ2 = KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=False)
+            M_λ1, M_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=False)
+            absErrorList_λ1 = abs(K_λ1-M_λ1)  # p in rows and Nsamples in columns
+            absErrorList_λ2 = abs(K_λ2-M_λ2)
+
+        elif reference_solver == "LOD" and solver == "KOOLOD":
+            K_λ1, K_λ2 = KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, model, save_file=False)
+            M_λ1, M_λ2 =  KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=False)
+            absErrorList_λ1 = abs(K_λ1-M_λ1)  # p in rows and Nsamples in columns
+            absErrorList_λ2 = abs(K_λ2-M_λ2)
 
         elif reference_solver == "exact":
             Exact_λ = Exact_EigenSolver(Neigen)
-            absErrorList_λ1 = abs(KLOD_λ1-Exact_λ)  # p in rows and Nsamples in columns
-            absErrorList_λ2 = abs(KLOD_λ2-Exact_λ)
+            absErrorList_λ1 = abs(K_λ1-Exact_λ)  # p in rows and Nsamples in columns
+            absErrorList_λ2 = abs(K_λ2-Exact_λ)
         else:
             print("Unrecognized reference solver!")
 
@@ -49,7 +65,7 @@ def convergence(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta,
     err1 = np.array(rmserr_p_λ1)
     err2 = np.array(rmserr_p_λ2)
     #print("err1", err1)
-
+    Nlines =3
     if save_files: 
         if not root == None:
             sio.savemat(root + '_RMSErr_H'  + '.mat', {'rmserr_lamb1': err1, 'rmserr_lamb2': err2, 'pList': pList, 'NC_list': NC_list})
