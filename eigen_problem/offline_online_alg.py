@@ -30,7 +30,7 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
         correctorsList = lod.computeBasisCorrectors(patch, IPatch, aPatch)
         csi = lod.computeBasisCoarseQuantities(patch, correctorsList, aPatch)
         return patch, correctorsList, csi.Kmsij, csi
-
+    
     aRefList, KmsijList, muTPrimeList, timeBasis, timeMatrixList = algorithms.computeCSI_offline(world, Nepsilon // NCoarse,k,boundaryConditions,model,correctors=False)  
     #print(aRefList)                                                           
     aRef = np.copy(aRefList[-1])
@@ -47,7 +47,23 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
     for ii in range(len(pList)):
         p = pList[ii]
         for N in range(NSamples):
-            aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
+            if model['name'] == 'check':
+                aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
+            elif model['name'] == 'incl':
+                left = model['left']
+                right = model['right']
+                aPert = build_coefficient.build_inclusions_defect_2d(NFine,Nepsilon,alpha,beta,left,right,p)
+            elif model['name'] == 'inclvalue':
+                left = model['left']
+                right = model['right']
+                value = model['defval']
+                aPert = build_coefficient.build_inclusions_defect_2d(NFine,Nepsilon,alpha,beta,left,right,p, value)
+            elif model['name'] in ['inclfill', 'inclshift', 'inclLshape']:
+                aPert = build_coefficient.build_inclusions_change_2d(NFine,Nepsilon,alpha,beta,left,right,p,model)
+            else:
+                NotImplementedError('other models not available!')
+
+
             #print('CoeffListSize:',aPert.size)
             #print('CoeffList: \n', aPert)
 

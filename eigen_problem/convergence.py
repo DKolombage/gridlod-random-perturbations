@@ -27,7 +27,7 @@ def convergence(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta,
             absErrorList_λ2 = abs(K_λ2-M_λ2)
 
         elif reference_solver == "FEM" and solver == "LOD":
-            K_λ1, K_λ2 = KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=False)
+            K_λ1, K_λ2 = KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, model, save_file=False)
             M_λ1, M_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=False)
             absErrorList_λ1 = abs(K_λ1-M_λ1)  # p in rows and Nsamples in columns
             absErrorList_λ2 = abs(K_λ2-M_λ2)

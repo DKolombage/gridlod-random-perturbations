@@ -8,7 +8,7 @@ sys.path.insert(0, '/home/kolombag/Documents/gridlod-random-perturbations/random
 import build_coefficient, lod_periodic
                    
 
-def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=True):
+def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, model, save_file=True):
       
         NpFine = np.prod(NFine+1)     # Number of "fine-nodes" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
         NpCoarse = np.prod(NCoarse+1) 
@@ -41,7 +41,21 @@ def KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pL
         for ii in range(len(pList)):
                 p = pList[ii]
                 for N in range(NSamples):
-                        aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
+                        if model['name'] == 'check':
+                                aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
+                        elif model['name'] == 'incl':
+                                left = model['left']
+                                right = model['right']
+                                aPert = build_coefficient.build_inclusions_defect_2d(NFine,Nepsilon,alpha,beta,left,right,p)
+                        elif model['name'] == 'inclvalue':
+                                left = model['left']
+                                right = model['right']
+                                value = model['defval']
+                                aPert = build_coefficient.build_inclusions_defect_2d(NFine,Nepsilon,alpha,beta,left,right,p, value)
+                        elif model['name'] in ['inclfill', 'inclshift', 'inclLshape']:
+                                aPert = build_coefficient.build_inclusions_change_2d(NFine,Nepsilon,alpha,beta,left,right,p,model)
+                        else:
+                                NotImplementedError('other models not available!')
 
                         #true LOD
                         if dim == 2:
