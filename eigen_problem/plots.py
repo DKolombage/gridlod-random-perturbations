@@ -1,5 +1,6 @@
 from with_FEM_MassMatrix import *
 from Reference_Solvers import *
+from convergence import *
 import math
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
@@ -13,7 +14,38 @@ import build_coefficient, lod_periodic
 
 np.random.seed(123)
 
-def plots_cvg(root, H_Convergence=True, p_Convergence=True):
+
+def plot_lowest_p(root, p_Convergence=True):
+    pNC = sio.loadmat(root + '_pList_NCList' + '.mat')
+    pList = pNC['pList'][0]
+    NC_list = pNC['NC_list'][0]
+
+    if p_Convergence:
+        fig = plt.figure()
+        ax4 = fig.add_subplot(1, 2, 1)
+        ax5 = fig.add_subplot(1, 2, 2)
+
+        err = sio.loadmat(root + '_meanErr_H' + str(64) + '.mat')
+        Error_λ1 = err['absErr_1']
+        Error_λ2 = err['absErr_2']
+        NSamples = len(Error_λ2[0, :])
+        rms_λ1 = []
+        rms_λ2 = []
+        for ii in range(len(pList)):
+            rms_λ1.append(np.sqrt(1. / NSamples * np.sum(Error_λ1[ii, :] ** 2)))
+            rms_λ2.append(np.sqrt(1. / NSamples * np.sum(Error_λ2[ii, :] ** 2)))
+        ax4.plot(pList, rms_λ1, '-*', label=r'${H=2^{-6}}$')
+        ax5.plot(pList, rms_λ2, '-*', label=r'${H=2^{-6}}$')
+        ax4.legend()
+        ax5.legend()
+        ax4.set_xlabel('p')
+        ax4.set_ylabel('root means square error of $λ_1$')
+        ax5.set_xlabel('p')
+        ax5.set_ylabel('root means square error of $λ_2$')
+        plt.show()
+        
+
+def plots_cvg(root, H_Convergence=True, p_Convergence=True, Mean_Lam = False):
     pNC = sio.loadmat(root + '_pList_NCList' + '.mat')
     pList = pNC['pList'][0]
     NC_list = pNC['NC_list'][0]
@@ -21,48 +53,74 @@ def plots_cvg(root, H_Convergence=True, p_Convergence=True):
     if H_Convergence:
         ax1=plt.figure().add_subplot()
         ax2=plt.figure().add_subplot()
+        ax3=plt.figure().add_subplot()
         data_array = sio.loadmat(root + '_RMSErr_H' + '.mat')
         err_Lam1 = data_array['rmserr_lamb1']
         err_Lam2 = data_array['rmserr_lamb2']
+        err_Lam = data_array['rmserr_lamb']
+        if Mean_Lam == True:
+            Mean_Lam_error = (err_Lam1+err_Lam2)/2
         for i in range(len(pList)):
             labelplain = 'p={' + str(pList[i]) + '}'
             ax1.loglog(NC_list, err_Lam1[:, i], label=r'${}$'.format(labelplain), marker='>')
             ax2.loglog(NC_list, err_Lam2[:,i], label=r'${}$'.format(labelplain), marker='<')
+            ax3.loglog(NC_list, err_Lam[:,i], label=r'${}$'.format(labelplain), marker='<')
+            if Mean_Lam == True:
+                ax3.loglog(NC_list, Mean_Lam_error[:, i], label=r'${}$'.format(labelplain), marker='+')        
+
+        ax1.loglog(NC_list, [err_Lam1[0,0]*0.5**(j*3)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^3)$')
+        ax2.loglog(NC_list, [err_Lam2[0,0]*0.5**(j*3)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^3)$')
+        ax3.loglog(NC_list, [err_Lam[0,0]*0.5**(j*3)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^3)$')
         ax1.legend()
         ax2.legend()
-        #ax3.legend()
+        ax3.legend()
         ax1.set_xlabel('$H^{-1}$')
         ax1.set_ylabel('Root Mean squard error of $λ_1$')
         ax2.set_xlabel('$H^{-1}$')
         ax2.set_ylabel('Root Mean squard error of $λ_2$')
+        ax3.set_xlabel('$H^{-1}$')
+        ax3.set_ylabel('Root Mean squard error of $λ$')
+        if Mean_Lam == True:
+            ax3.loglog(NC_list, [Mean_Lam_error[0,0]*0.5**(j*2)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^2)$')
+            ax3.legend()
+            ax3.set_xlabel('$H^{-1}$')
+            ax3.set_ylabel('Root Mean squard error of $λ$')
         plt.show()
 
     if p_Convergence:
         fig = plt.figure()
         ax4 = fig.add_subplot(1, 2, 1)
         ax5 = fig.add_subplot(1, 2, 2)
+        ax6=plt.figure().add_subplot()
 
         i = -3
         for N in NC_list:
             err = sio.loadmat(root + '_meanErr_H' + str(N) + '.mat')
             Error_λ1 = err['absErr_1']
             Error_λ2 = err['absErr_2']
+            Error = err['absErr']
             NSamples = len(Error_λ2[0, :])
             rms_λ1 = []
             rms_λ2 = []
+            rms=[]
             for ii in range(len(pList)):
                 rms_λ1.append(np.sqrt(1. / NSamples * np.sum(Error_λ1[ii, :] ** 2)))
                 rms_λ2.append(np.sqrt(1. / NSamples * np.sum(Error_λ2[ii, :] ** 2)))
+                rms.append(np.sqrt(1. / NSamples * np.sum(Error[ii, :] ** 2)))
             labelplain = 'H=2^{' + str(i) + '}'
             ax4.plot(pList, rms_λ1, '-*', label=r'${}$'.format(labelplain))
             ax5.plot(pList, rms_λ2, '-*', label=r'${}$'.format(labelplain))
+            ax6.plot(pList, rms, '-*', label=r'${}$'.format(labelplain))
             i -= 1
         ax4.legend()
         ax5.legend()
+        ax6.legend()
         ax4.set_xlabel('p')
         ax4.set_ylabel('root means square error of $λ_1$')
         ax5.set_xlabel('p')
         ax5.set_ylabel('root means square error of $λ_2$')
+        ax6.set_xlabel('p')
+        ax6.set_ylabel('root means square error of $λ$')
         plt.show()
         
 
@@ -122,3 +180,33 @@ def plots_coeffs(Nepsilon, NFine, alpha, beta, pList, type):
                 im = ax.imshow(apertGrid, origin='lower', extent=(0, 1, 0, 1), cmap=mycmap, norm=norm)
 
             plt.show()
+
+
+def plot(ts, *xs, xlabel="$H^{-1}$", ylabel="x", names=None, title=None):
+    if names is None:
+        names = [""]*len(xs)
+    fig = plt.figure()
+    for x, name in zip(xs, names):
+        plt.plot(ts, x, label=name,marker ='+', lw = 1.0)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend(loc="best")
+    plt.title(title)
+    fig.savefig("1.svg") #, dpi=150
+    plt.show()
+
+
+
+def k_plot(Neigen, NCoarse, NFine, Nepsilon, NSamples, pList,kList, alpha,beta, model, solver = "LOD", reference_solver="FEM", save_files = True, root=None):
+    NC_list = np.array([16,32,64,128])
+    err_1 =[]
+    err_2=[]
+    for k in kList:
+        err_k1 = errors(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, model, solver  = "LOD", reference_solver="FEM", save_files = True, plot=True, root=None)
+        err_λ1_k1 = np.copy(err_k1[0])
+        err_λ2_k1 = np.copy(err_k1[1]) 
+        errors_1 = err_1.append(err_λ1_k1)
+        errors_2 = err_2.append(err_λ2_k1)   
+    plot(NC_list, (errors_1[j] for j in range(len(kList))), names =["$k=1$", "$k=2$", "$k=3$", "k=4"], ylabel="Root mean squard error of $\lambda_1$")
+    plot(NC_list, (errors_2[j] for j in range(len(kList))), names =["$k=1$", "$k=2$", "$k=3$", "k=4"], ylabel="Root mean squard error of $\lambda_2$")
+    return 
