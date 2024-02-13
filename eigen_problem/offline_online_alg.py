@@ -41,8 +41,8 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
     computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
     patchT = list(map(computePatch, range(world.NtCoarse)))
     KFullpert = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijRef, periodic=True)
-    KLOD_λ1 = np.zeros((len(pList), NSamples))
-    KLOD_λ2 = np.zeros((len(pList), NSamples))
+    KOLOD_λ1 = np.zeros((len(pList), NSamples))
+    KOLOD_λ2 = np.zeros((len(pList), NSamples))
 
     for ii in range(len(pList)):
         p = pList[ii]
@@ -79,7 +79,7 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
 
             patchT, correctorsTtrue, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
 
-            KFulltrue = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijTtrue, periodic=True)
+            #KFulltrue = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijTtrue, periodic=True)
 
             #combined LOD
             KFullcomb, _,_ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,k,
@@ -93,42 +93,24 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
             MFEM = fem.assemblePatchMatrix(world.NWorldCoarse, world.MLocCoarse) 
 
             if dim == 2:
-                KFulltrue.tolil()
-                KFulltrue[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
-                        += KFulltrue[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]         # Wrap the LHS-RHS-row values together at LHS-mesh boundary points
-                KFulltrue[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
-                        += KFulltrue[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]    # Wrap the LHS-RHS-column values together at LHS-mesh boundary points
-                KFulltrue[np.arange(NCoarse[0]+1), :] += KFulltrue[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]          # Wrap the Bottom - top row-values together at BOTTOM-mesh boundary points 
-                KFulltrue[:, np.arange(NCoarse[0] + 1)] += KFulltrue[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]  # Wrap the Bottom - top column-values together at BOTTOM-mesh boundary points
-                KFulltrue.tocsc()
 
                 fixed_DoF = np.concatenate((np.arange(NCoarse[1] * (NCoarse[0] + 1), NpCoarse), 
                                                 np.arange(NCoarse[0], NpCoarse - 1, NCoarse[0] + 1)))    # All the abandoning boundary points
                 free_DoF = np.setdiff1d(np.arange(NpCoarse), fixed_DoF)  # Rest of the nodal indices 
-                KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]         # Array after BC applied
+                #KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]         # Array after BC applied
 
-                KFullcomb.tolil()
-                KFullcomb[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
-                        += KFullcomb[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]         # Wrap the LHS-RHS-row values together at LHS-mesh boundary points
-                KFullcomb[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
-                        += KFullcomb[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]    # Wrap the LHS-RHS-column values together at LHS-mesh boundary points
-                KFullcomb[np.arange(NCoarse[0]+1), :] += KFullcomb[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]          # Wrap the Bottom - top row-values together at BOTTOM-mesh boundary points 
-                KFullcomb[:, np.arange(NCoarse[0] + 1)] += KFullcomb[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]  # Wrap the Bottom - top column-values together at BOTTOM-mesh boundary points
-                KFullcomb.tocsc()
-                fixed_DoF = np.concatenate((np.arange(NCoarse[1] * (NCoarse[0] + 1), NpCoarse), 
-                                                np.arange(NCoarse[0], NpCoarse - 1, NCoarse[0] + 1)))    # All the abandoning boundary points
-                free_DoF = np.setdiff1d(np.arange(NpCoarse), fixed_DoF)  # Rest of the nodal indices 
+                #KFullcomb.tolil()
+                #KFullcomb[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
+                #        += KFullcomb[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]         # Wrap the LHS-RHS-row values together at LHS-mesh boundary points
+                #KFullcomb[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
+                #        += KFullcomb[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]    # Wrap the LHS-RHS-column values together at LHS-mesh boundary points
+                #KFullcomb[np.arange(NCoarse[0]+1), :] += KFullcomb[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]          # Wrap the Bottom - top row-values together at BOTTOM-mesh boundary points 
+                #KFullcomb[:, np.arange(NCoarse[0] + 1)] += KFullcomb[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]  # Wrap the Bottom - top column-values together at BOTTOM-mesh boundary points
+                #KFullcomb.tocsc()
+
                 KOOLOD_Free_DoF = KFullcomb[free_DoF][:, free_DoF]  
 
-                KFullpertup.tolil()
-                KFullpertup[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
-                        += KFullcomb[np.arange(NCoarse[0], np.prod(NCoarse+1), NCoarse[0]+1),:]         # Wrap the LHS-RHS-row values together at LHS-mesh boundary points
-                KFullpertup[:, np.arange(0, NCoarse[1] * (NCoarse[0] + 1) + 1, NCoarse[0] + 1)] \
-                        += KFullpertup[:, np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)]    # Wrap the LHS-RHS-column values together at LHS-mesh boundary points
-                KFullpertup[np.arange(NCoarse[0]+1), :] += KFullpertup[np.arange(NCoarse[1]*(NCoarse[0]+1), np.prod(NCoarse+1)), :]          # Wrap the Bottom - top row-values together at BOTTOM-mesh boundary points 
-                KFullpertup[:, np.arange(NCoarse[0] + 1)] += KFullpertup[:, np.arange(NCoarse[1] * (NCoarse[0] + 1), np.prod(NCoarse + 1))]  # Wrap the Bottom - top column-values together at BOTTOM-mesh boundary points
-                KFullpertup.tocsc()
-                KOOLOD_pert_Free_DoF = KFullpertup[free_DoF][:, free_DoF]  
+                # KOOLOD_pert_Free_DoF = KFullpertup[free_DoF][:, free_DoF]  
 
                 MFEM.tolil()
                 MFEM[np.arange(0, NCoarse[1]*(NCoarse[0]+1)+1, NCoarse[0]+1),:] \
@@ -140,32 +122,21 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
                 MFEM.tocsc()
                 MFEM_Free_DoF = MFEM[free_DoF][:, free_DoF]
             else:
-                KFulltrue.tolil()
-                KFulltrue[0] += KFulltrue[-1]
-                KFulltrue[:,0] += KFulltrue[:,-1]
-                KFulltrue.tocsc() 
 
                 fixed_DoF = np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)
                 free_DoF = np.setdiff1d(np.arange(NpCoarse-1), fixed_DoF)
-                KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]
+                #KLOD_Free_DoF = KFulltrue[free_DoF][:, free_DoF]
 
-                KFullcomb.tolil()
-                KFullcomb[0] += KFullcomb[-1]
-                KFullcomb[:,0] += KFullcomb[:,-1]
-                KFullcomb.tocsc() 
-
-                fixed_DoF = np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)
-                free_DoF = np.setdiff1d(np.arange(NpCoarse-1), fixed_DoF)
                 KOOLOD_Free_DoF = KFullcomb[free_DoF][:, free_DoF]
 
-                KFullpertup.tolil()
-                KFullpertup[0] += KFullpertup[-1]
-                KFullpertup[:,0] += KFullpertup[:,-1]
-                KFullpertup.tocsc() 
+                #KFullpertup.tolil()
+                #KFullpertup[0] += KFullpertup[-1]
+                #KFullpertup[:,0] += KFullpertup[:,-1]
+                #KFullpertup.tocsc() 
 
                 fixed_DoF = np.arange(NCoarse[0], np.prod(NCoarse + 1), NCoarse[0] + 1)
                 free_DoF = np.setdiff1d(np.arange(NpCoarse-1), fixed_DoF)
-                KOOLOD_pert_Free_DoF = KFullpertup[free_DoF][:, free_DoF]
+                #KOOLOD_pert_Free_DoF = KFullpertup[free_DoF][:, free_DoF]
 
                 MFEM.tolil()
                 MFEM[0] += MFEM[-1]
@@ -175,9 +146,9 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
                 MFEM_Free_DoF = MFEM[free_DoF][:, free_DoF]
 
             evals, evecs = ln.eigsh(KOOLOD_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) # v0, (Stiff_Matrix, Number of e.values needed, Mass_Matrix), 
-            KLOD_λ1[ii, N] = evals[1]
-            KLOD_λ2[ii, N] = evals[2]
+            KOLOD_λ1[ii, N] = evals[1]
+            KOLOD_λ2[ii, N] = evals[2]
         if save_file:
-            sio.savemat('KLOD_Eigenvalues' + '.mat', {'KLOD_1st_Evalue': KLOD_λ1, 'KLOD_2nd_Evalue': KLOD_λ2, 'pList': pList})
-    return KLOD_λ1, KLOD_λ2 #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
+            sio.savemat('KOOLOD_Eigenvalues' + '.mat', {'KOOLOD_1st_Evalue': KOLOD_λ1, 'KOOLOD_2nd_Evalue': KOLOD_λ2, 'pList': pList})
+    return KOLOD_λ1, KOLOD_λ2 #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
 
