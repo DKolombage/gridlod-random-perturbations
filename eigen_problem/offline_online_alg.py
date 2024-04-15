@@ -44,8 +44,11 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
     KFullpert = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijRef, periodic=True)
     KOLOD_λ1 = np.zeros((len(pList), NSamples))
     KOLOD_λ2 = np.zeros((len(pList), NSamples))
+<<<<<<< HEAD
     KOLOD_λ1vec =np.zeros((len(pList), NSamples))
     KOLOD_λ2vec =np.zeros((len(pList), NSamples))
+=======
+>>>>>>> ff7095183ee18d2373f706acc136adee8092f105
 
     for ii in range(len(pList)):
         p = pList[ii]
@@ -151,9 +154,15 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
             evals, evecs = ln.eigsh(KOOLOD_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) # v0, (Stiff_Matrix, Number of e.values needed, Mass_Matrix), 
             KOLOD_λ1[ii, N] = evals[1]
             KOLOD_λ2[ii, N] = evals[2]
+<<<<<<< HEAD
             print(evecs[:,1:])
         if save_file:
             sio.savemat('KOOLOD_Eigenvalues' + '.mat', {'KOOLOD_1st_Evalue': KOLOD_λ1, 'KOOLOD_2nd_Evalue': KOLOD_λ2, 'pList': pList})
             sio.savemat('KOOLOD_Eigenfunctions' + '.mat', {'lambda_1_vecs': evecs[:,1]})
     return KOLOD_λ1, KOLOD_λ2  #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
+=======
+        if save_file:
+            sio.savemat('KOOLOD_Eigenvalues' + '.mat', {'KOOLOD_1st_Evalue': KOLOD_λ1, 'KOOLOD_2nd_Evalue': KOLOD_λ2, 'pList': pList})
+    return KOLOD_λ1, KOLOD_λ2 #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
+>>>>>>> ff7095183ee18d2373f706acc136adee8092f105
 
