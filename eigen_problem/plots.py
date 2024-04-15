@@ -12,7 +12,7 @@ from gridlod.world import World
 sys.path.insert(0, '/home/kolombag/Documents/gridlod-random-perturbations/random_perturbations')
 import build_coefficient, lod_periodic
 
-np.random.seed(123)
+np.random.seed(1)
 
 
 def plot_lowest_p(root, p_Convergence=True):
@@ -71,6 +71,9 @@ def plots_cvg(root, H_Convergence=True, p_Convergence=True, Mean_Lam = False):
         ax1.loglog(NC_list, [err_Lam1[0,0]*0.5**(j*3)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^3)$')
         ax2.loglog(NC_list, [err_Lam2[0,0]*0.5**(j*3)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^3)$')
         ax3.loglog(NC_list, [err_Lam[0,0]*0.5**(j*3)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^3)$')
+        ax1.loglog(NC_list, [err_Lam1[0,0]*0.5**(j*2)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^2)$')
+        ax2.loglog(NC_list, [err_Lam2[0,0]*0.5**(j*2)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^2)$')
+        ax3.loglog(NC_list, [err_Lam[0,0]*0.5**(j*2)for j in range(len(NC_list))], lw = 1.0, color="black",  linestyle='dashed',label='$\mathscr{O}(H^2)$')
         ax1.legend()
         ax2.legend()
         ax3.legend()

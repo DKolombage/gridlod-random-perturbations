@@ -37,12 +37,15 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
     KmsijRef = np.copy(KmsijList[-1])
     muTPrimeRef = muTPrimeList[-1]
     #correctorsRef = correctorsList[-1]
+
     basis = fem.assembleProlongationMatrix(world.NWorldCoarse, world.NCoarseElement)
     computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
     patchT = list(map(computePatch, range(world.NtCoarse)))
     KFullpert = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijRef, periodic=True)
     KOLOD_λ1 = np.zeros((len(pList), NSamples))
     KOLOD_λ2 = np.zeros((len(pList), NSamples))
+    KOLOD_λ1vec =np.zeros((len(pList), NSamples))
+    KOLOD_λ2vec =np.zeros((len(pList), NSamples))
 
     for ii in range(len(pList)):
         p = pList[ii]
@@ -68,27 +71,27 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
             #print('CoeffList: \n', aPert)
 
             #true LOD
-            if dim == 2:
-                middle = world.NWorldCoarse[1] // 2 * world.NWorldCoarse[0] + world.NWorldCoarse[0] // 2
-            else: 
-                middle = NCoarse[0] // 2
-                    
-            patchRef = lod_periodic.PatchPeriodic(world, k, middle)
-            IPatch = lambda: interp.L2ProjectionPatchMatrix(patchRef)
-            computeKmsijT = lambda TInd: computeKmsij(TInd, aPert, IPatch)     
+            #if dim == 2:
+            #    middle = world.NWorldCoarse[1] // 2 * world.NWorldCoarse[0] + world.NWorldCoarse[0] // 2
+            #else: 
+            #    middle = NCoarse[0] // 2
+            #        
+            #patchRef = lod_periodic.PatchPeriodic(world, k, middle)
+            #IPatch = lambda: interp.L2ProjectionPatchMatrix(patchRef)
+            #computeKmsijT = lambda TInd: computeKmsij(TInd, aPert, IPatch)     
 
-            patchT, correctorsTtrue, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
+            #patchT, correctorsTtrue, KmsijTtrue, _ = zip(*map(computeKmsijT, range(world.NtCoarse)))
 
             #KFulltrue = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijTtrue, periodic=True)
 
             #combined LOD
             KFullcomb, _,_ = algorithms.compute_combined_MsStiffness(world,Nepsilon,aPert,aRefList,KmsijList,muTPrimeList,k,
                                                                    model,compute_indicator=False)
-            correctorsTtrue = tuple(correctorsTtrue)
-            modbasistrue = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsTtrue, periodic=True)
+            #correctorsTtrue = tuple(correctorsTtrue)
+            #modbasistrue = basis - lod_periodic.assembleBasisCorrectors(world, patchT, correctorsTtrue, periodic=True)
 
-            KFullpertup, _ = algorithms.compute_perturbed_MsStiffness(world, aPert, aRef, KmsijRef, muTPrimeRef, k,
-                                                                      percentage_comp)
+            #KFullpertup, _ = algorithms.compute_perturbed_MsStiffness(world, aPert, aRef, KmsijRef, muTPrimeRef, k,
+            #                                                          percentage_comp)
             # FEM Mass Matrix
             MFEM = fem.assemblePatchMatrix(world.NWorldCoarse, world.MLocCoarse) 
 
@@ -148,7 +151,9 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
             evals, evecs = ln.eigsh(KOOLOD_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) # v0, (Stiff_Matrix, Number of e.values needed, Mass_Matrix), 
             KOLOD_λ1[ii, N] = evals[1]
             KOLOD_λ2[ii, N] = evals[2]
+            print(evecs[:,1:])
         if save_file:
             sio.savemat('KOOLOD_Eigenvalues' + '.mat', {'KOOLOD_1st_Evalue': KOLOD_λ1, 'KOOLOD_2nd_Evalue': KOLOD_λ2, 'pList': pList})
-    return KOLOD_λ1, KOLOD_λ2 #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
+            sio.savemat('KOOLOD_Eigenfunctions' + '.mat', {'lambda_1_vecs': evecs[:,1]})
+    return KOLOD_λ1, KOLOD_λ2  #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
 
