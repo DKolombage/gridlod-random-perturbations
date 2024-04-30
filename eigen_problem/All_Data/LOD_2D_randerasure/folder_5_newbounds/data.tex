@@ -1,0 +1,36 @@
+alpha = 1
+beta = 10
+NSamples =200
+pList = [0.002,0.004,0.006,0.008,0.01]
+NCoarse = np.array([4,4])
+NFine = np.array([256, 256])   # Number of "fine-blocks" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
+Nepsilon = np.array([128,128])    # Number of "epsilon-blocks" on τ_ε mesh in each direction (1-D array: [x_ε, y_ε, z_ε] if 3D etc.)     # Number of "coarse-blocks" on τ_H mesh in each direction (1-D array: [x_H, y_H, z_H]) # Number of layers in the patch 
+Neigen = 3
+k =3
+left = np.array([0.25, 0.25])
+right = np.array([0.75, 0.75])
+def_values = [alpha, 0.5, 5.]
+modelincl = {'name': 'incl', 'bgval': alpha, 'inclval': beta, 'left': left, 'right': right}
+np.random.seed(1)
+root = 'All_Data/LOD_2D_randerasure/folder_5_newbounds/'
+
+
+python3 E3_LOD_2D_RE.py
+/home/kolombag/newdir/gridlod-random-perturbations/venv3/lib/python3.9/site-packages/scipy/sparse/_index.py:136: SparseEfficiencyWarning: Changing the sparsity structure of a csc_matrix is expensive. lil_matrix is more efficient.
+  self._set_arrayXarray_sparse(i, j, x)
+Root mean square absolute error of λ1:
+ [[27.54444021 27.33403333 27.11798494 26.90550831 26.68342705]
+ [27.16253141 26.9526878  26.73737252 26.5257238  26.30387112]
+ [27.13449203 26.92472183 26.70950329 26.49771528 26.27621924]
+ [27.15599144 26.94748894 26.73247158 26.52100553 26.29924011]]
+Root mean square absolute error of λ2: 
+ [[27.53759209 27.32453266 27.10490103 26.8915972  26.66643262]
+ [27.15561637 26.94323664 26.72443016 26.51161688 26.28701574]
+ [27.12769041 26.91551277 26.69651177 26.48353301 26.25945878]
+ [27.14860836 26.9386243  26.72016199 26.50827845 26.28372089]]
+Root mean square absolute error of λ: 
+ [[27.54101598 27.32928269 27.11144248 26.89855205 26.67492905]
+ [27.15907367 26.94796187 26.73090076 26.51866968 26.29544269]
+ [27.13109095 26.92011694 26.70300695 26.49062345 26.26783827]
+ [27.1522996  26.94305611 26.72631588 26.51464086 26.29147956]]
+hplot [ 8 16 32 64]
