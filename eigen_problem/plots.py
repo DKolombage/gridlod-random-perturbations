@@ -49,6 +49,8 @@ def plots_cvg(root, H_Convergence=True, p_Convergence=True, Mean_Lam = False):
     pNC = sio.loadmat(root + '_pList_NCList' + '.mat')
     pList = pNC['pList'][0]
     NC_list = pNC['NC_list'][0]
+    #NC_list_all = pNC['NC_list'][0]
+    #NC_list = NC_list_all[1::]
     print("hplot", NC_list)
     if H_Convergence:
         ax1=plt.figure().add_subplot()
@@ -213,3 +215,47 @@ def k_plot(Neigen, NCoarse, NFine, Nepsilon, NSamples, pList,kList, alpha,beta, 
     plot(NC_list, (errors_1[j] for j in range(len(kList))), names =["$k=1$", "$k=2$", "$k=3$", "k=4"], ylabel="Root mean squard error of $\lambda_1$")
     plot(NC_list, (errors_2[j] for j in range(len(kList))), names =["$k=1$", "$k=2$", "$k=3$", "k=4"], ylabel="Root mean squard error of $\lambda_2$")
     return 
+
+def plot_p_vs_s(root, xlabel="$p-$values", ylabel="$s-$values", title=None):
+    pNC = sio.loadmat(root + '_pList_NCList' + '.mat')
+    slist = sio.loadmat(root+'s_values'+'.mat')
+    pList = pNC['pList'][0]
+    sList = slist['s_list'][0]
+    plt.plot(pList, sList,marker ='+', lw = 1.0)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend(loc="best")
+    plt.title(title)
+    plt.show()
+
+
+def plot_s_vs_unity_errors(root1, root2, relative = True):
+    pNC = sio.loadmat(root1 + '_pList_NCList' + '.mat')
+    pList = pNC['pList'][0]
+    NC_list = pNC['NC_list'][0]
+    slist = sio.loadmat(root1+'s_values'+'.mat')
+
+    ax1=plt.figure().add_subplot()
+    ax2=plt.figure().add_subplot()
+    data_array_unity = sio.loadmat(root1 + '_RMSErr_H' + '.mat')
+    err_Lam_unity = data_array_unity['rmserr_lamb']
+
+    data_array_s=sio.loadmat(root2+'_RMSErr_H' + '.mat')
+    err_Lam_s = data_array_s['rmserr_lamb']
+    if relative:
+        su_diff = np.divide((err_Lam_unity-err_Lam_s), err_Lam_unity)
+        for i in range(len(pList)):
+            labelplain = 'p={' + str(pList[i]) + '}'
+            ax1.loglog(NC_list, su_diff[:,i], label=r'${}$'.format(labelplain), marker='+')
+    for i in range(0,3):
+        labelplain1 = 'p_{uty}={' + str(pList[i]) + '}'
+        labelplain2 = 'p_{s}={' + str(pList[i]) + '}'
+        ax2.loglog(NC_list, err_Lam_unity[:,i],  label=r'${}$'.format(labelplain1), marker ='+')
+        ax2.loglog(NC_list, err_Lam_s[:,i], label=r'${}$'.format(labelplain2), marker ='<')
+    ax2.legend()
+    ax2.set_xlabel('$H^{-1}$')
+    ax2.set_ylabel('Root Mean squard error of $λ_2$')
+    ax1.legend()
+    ax1.set_xlabel('$H^{-1}$')
+    ax1.set_ylabel('Relative error between uty_error vs s_error$')
+    plt.show()

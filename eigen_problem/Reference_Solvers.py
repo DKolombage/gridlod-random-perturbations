@@ -21,7 +21,7 @@ def Exact_EigenSolver(Neigen):
 
 
 # FEM solver 1D and 2D
-def FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=True):
+def FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, model, save_file=True):
         NpFine = np.prod(NFine+1)     # Number of "fine-nodes" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
         NpCoarse = np.prod(NCoarse+1) 
         dim = np.size(NFine)
@@ -42,12 +42,25 @@ def FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon
         for ii in range(len(pList)):
             p= pList[ii]
             for N in range(NSamples):
-                aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
+                if model['name'] == 'check':
+                      aPert = build_coefficient.build_randomcheckerboard(Nepsilon,NFine,alpha,beta,p)
+                elif model['name'] == 'incl':
+                      left = model['left']
+                      right = model['right']
+                      aPert = build_coefficient.build_inclusions_defect_2d(NFine,Nepsilon,alpha,beta,left,right,p)
+                elif model['name'] == 'inclvalue':
+                      left = model['left']
+                      right = model['right']
+                      value = model['defval']
+                      aPert = build_coefficient.build_inclusions_defect_2d(NFine,Nepsilon,alpha,beta,left,right,p, value)
+                elif model['name'] in ['inclfill', 'inclshift', 'inclLshape']:
+                      aPert = build_coefficient.build_inclusions_change_2d(NFine,Nepsilon,alpha,beta,left,right,p,model)
+                else:
+                      NotImplementedError('other models not available!')
+                      
                 MFEM = fem.assemblePatchMatrix(world.NWorldFine, world.MLocFine) 
                 KFEM = fem.assemblePatchMatrix(world.NWorldFine, world.ALocFine, aPert) 
-                #print('M \n', MFEM)
-                #print('K \n', KFEM)
-                #print('coeff \n', aPert)
+     
 
                 if dim == 2:
                         KFEM.tolil()
@@ -61,12 +74,9 @@ def FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon
 
                         fixed_DoF = np.concatenate((np.arange(NFine[1] * (NFine[0] + 1), NpFine), 
                                                         np.arange(NFine[0], NpFine - 1, NFine[0] + 1)))    # All the abandoning boundary points
-                        #print('fixed_size:',fixed_DoF.size)
-                        #print('fixed: \n', fixed_DoF)
-                        #print('fixed_shape:', fixed_DoF.shape)
+                        
                         free_DoF = np.setdiff1d(np.arange(NpFine), fixed_DoF)  # Rest of the nodal indices 
                         KFEM_Free_DoF = KFEM[free_DoF][:, free_DoF]         # Array after BC applied
-                        #print('KLOD_Free_DoF:', KFEM.shape)
 
                         MFEM.tolil()
                         #print('Mlil: \n', MFEM.tolil())
