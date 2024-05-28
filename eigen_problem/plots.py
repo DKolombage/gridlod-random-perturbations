@@ -264,7 +264,7 @@ def plot_s_vs_unity_errors(root1, root2, p_cvg = True, H_cvg = False, relative =
         ax4 = fig.add_subplot(1, 2, 1)
         ax5 = fig.add_subplot(1, 2, 2)
         ax6=plt.figure().add_subplot()
-        i = -3
+        i = -5 # change the number accordingly
         for N in NC_list[2:4]:
             err_1 = sio.loadmat(root1 + '_meanErr_H' + str(N) + '.mat')
             err_s = sio.loadmat(root2 + '_meanErr_H' + str(N) + '.mat')
