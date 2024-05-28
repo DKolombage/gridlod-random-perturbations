@@ -229,33 +229,86 @@ def plot_p_vs_s(root, xlabel="$p-$values", ylabel="$s-$values", title=None):
     plt.show()
 
 
-def plot_s_vs_unity_errors(root1, root2, relative = True):
+def plot_s_vs_unity_errors(root1, root2, p_cvg = True, H_cvg = False, relative = False):
     pNC = sio.loadmat(root1 + '_pList_NCList' + '.mat')
     pList = pNC['pList'][0]
     NC_list = pNC['NC_list'][0]
     slist = sio.loadmat(root1+'s_values'+'.mat')
 
-    ax1=plt.figure().add_subplot()
-    ax2=plt.figure().add_subplot()
     data_array_unity = sio.loadmat(root1 + '_RMSErr_H' + '.mat')
     err_Lam_unity = data_array_unity['rmserr_lamb']
-
     data_array_s=sio.loadmat(root2+'_RMSErr_H' + '.mat')
     err_Lam_s = data_array_s['rmserr_lamb']
     if relative:
+        ax1=plt.figure().add_subplot()
         su_diff = np.divide((err_Lam_unity-err_Lam_s), err_Lam_unity)
         for i in range(len(pList)):
             labelplain = 'p={' + str(pList[i]) + '}'
             ax1.loglog(NC_list, su_diff[:,i], label=r'${}$'.format(labelplain), marker='+')
-    for i in range(0,3):
-        labelplain1 = 'p_{uty}={' + str(pList[i]) + '}'
-        labelplain2 = 'p_{s}={' + str(pList[i]) + '}'
-        ax2.loglog(NC_list, err_Lam_unity[:,i],  label=r'${}$'.format(labelplain1), marker ='+')
-        ax2.loglog(NC_list, err_Lam_s[:,i], label=r'${}$'.format(labelplain2), marker ='<')
-    ax2.legend()
-    ax2.set_xlabel('$H^{-1}$')
-    ax2.set_ylabel('Root Mean squard error of $λ_2$')
-    ax1.legend()
-    ax1.set_xlabel('$H^{-1}$')
-    ax1.set_ylabel('Relative error between uty_error vs s_error$')
+        ax1.legend()
+        ax1.set_xlabel('$H^{-1}$')
+        ax1.set_ylabel('Relative error between uty_error vs s_error$')
+    if H_cvg:
+        ax2=plt.figure().add_subplot()
+        for i in range(0,3):
+            labelplain1 = 'p_{uty}={' + str(pList[i]) + '}'
+            labelplain2 = 'p_{s}={' + str(pList[i]) + '}'
+            ax2.loglog(NC_list, err_Lam_unity[:,i],  label=r'${}$'.format(labelplain1), marker ='+')
+            ax2.loglog(NC_list, err_Lam_s[:,i], label=r'${}$'.format(labelplain2), marker ='<')
+        ax2.legend()
+        ax2.set_xlabel('$H^{-1}$')
+        ax2.set_ylabel('Root Mean squard error of $λ_2$')
+    
+    if p_cvg:
+        fig = plt.figure()
+        ax4 = fig.add_subplot(1, 2, 1)
+        ax5 = fig.add_subplot(1, 2, 2)
+        ax6=plt.figure().add_subplot()
+        i = -3
+        for N in NC_list[2:4]:
+            err_1 = sio.loadmat(root1 + '_meanErr_H' + str(N) + '.mat')
+            err_s = sio.loadmat(root2 + '_meanErr_H' + str(N) + '.mat')
+            Error_λ1_1 = err_1['absErr_1']
+            Error_λ2_1 = err_1['absErr_2']
+            Error_1 = err_1['absErr']
+            Error_λ1_s = err_s['absErr_1']
+            Error_λ2_s = err_s['absErr_2']
+            Error_s = err_s['absErr']
+            NSamples = len(Error_λ2_1[0, :])
+            rms_λ1_1 = []
+            rms_λ2_1 = []
+            rms_1=[]
+            rms_λ1_s = []
+            rms_λ2_s = []
+            rms_s=[]
+            for ii in range(len(pList)):
+                rms_λ1_1.append(np.sqrt(1. / NSamples * np.sum(Error_λ1_1[ii, :] ** 2)))
+                rms_λ2_1.append(np.sqrt(1. / NSamples * np.sum(Error_λ2_1[ii, :] ** 2)))
+                rms_1.append(np.sqrt(1. / NSamples * np.sum(Error_1[ii, :] ** 2)))
+                rms_λ1_s.append(np.sqrt(1. / NSamples * np.sum(Error_λ1_s[ii, :] ** 2)))
+                rms_λ2_s.append(np.sqrt(1. / NSamples * np.sum(Error_λ2_s[ii, :] ** 2)))
+                rms_s.append(np.sqrt(1. / NSamples * np.sum(Error_s[ii, :] ** 2)))
+            labelplain1 = 'H_{uty}=2^{' + str(i) + '}'
+            labelplain2 = 'H_s=2^{' + str(i) + '}'
+            ax4.plot(pList, rms_λ1_1, '-*', label=r'${}$'.format(labelplain1))
+            ax4.plot(pList, rms_λ1_s, '-+', label=r'${}$'.format(labelplain2))
+            ax5.plot(pList, rms_λ2_1, '-*', label=r'${}$'.format(labelplain1))
+            ax5.plot(pList, rms_λ2_s, '-+', label=r'${}$'.format(labelplain2))
+            ax6.plot(pList, rms_1, '-*', label=r'${}$'.format(labelplain1))
+            ax6.plot(pList, rms_s, '-+', label=r'${}$'.format(labelplain2))
+            i -= 1  
+        ax4.legend()
+        ax5.legend()
+        ax6.legend()
+        ax4.set_xlabel('p')
+        ax4.set_ylabel('root means square error of $λ_1$')
+        ax5.set_xlabel('p')
+        ax5.set_ylabel('root means square error of $λ_2$')
+        ax6.set_xlabel('p')
+        ax6.set_ylabel('root means square error of $λ$')
     plt.show()
+
+
+
+        
+    
