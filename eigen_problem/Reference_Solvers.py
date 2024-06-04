@@ -28,7 +28,7 @@ def FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon
         
         boundaryConditions = None
         percentage_comp = 0.15
-        np.random.seed(123)
+        np.random.seed(1)
 
         NCoarseElement = NFine // NCoarse
         world = World(NCoarse, NCoarseElement, boundaryConditions)
