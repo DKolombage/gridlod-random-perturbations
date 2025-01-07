@@ -29,9 +29,9 @@ def k_convergence_plots( dimension=1, k=3, root=root):
 
         ts=np.array([16,32,64,128])
         #ts=np.array([8,16,32,64])
-        plot(ts, l1_k1_error, l1_k2_error, l1_k3_error, l1_k4_error, names =["$k=1$", "$k=2$", "$k=3$", "$k=4$"], ylabel="Root mean squard error of $\lambda_1$", title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=4$, $p=0.01$ and $n\epsilon = 256$, $nh=512$)")
-        plot(ts, l2_k1_error, l2_k2_error, l2_k3_error, l2_k4_error, names =["$k=1$", "$k=2$", "$k=3$", "$k=4$"], ylabel="Root mean squard error of $\lambda_2$", title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=4$, $p=0.01$ and $n\epsilon = 256$, $nh=512$)")
-        plot(ts, l_k1_error, l_k2_error, l_k3_error, l_k4_error, names =["$k=1$", "$k=2$", "$k=3$", "$k=4$"], ylabel="Root mean squard error of the smallest $\lambda$", title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=4$, $p=0.01$ and $n\epsilon = 256$, $nh=512$)")
+        plot(ts, l1_k1_error, l1_k2_error, l1_k3_error, l1_k4_error, names =["$k=1$", "$k=2$", "$k=3$", "$k=4$"], ylabel="Root mean squard error of $\lambda_1$")#, title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=4$, $p=0.01$ and $n\epsilon = 256$, $nh=512$)")
+        plot(ts, l2_k1_error, l2_k2_error, l2_k3_error, l2_k4_error, names =["$k=1$", "$k=2$", "$k=3$", "$k=4$"], ylabel="Root mean squard error of $\lambda_2$")#, title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=4$, $p=0.01$ and $n\epsilon = 256$, $nh=512$)")
+        plot(ts, l_k1_error, l_k2_error, l_k3_error, l_k4_error, names =["$k=1$", "$k=2$", "$k=3$", "$k=4$"], ylabel="Root mean squard error of the smallest $\lambda$")#, title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=4$, $p=0.01$ and $n\epsilon = 256$, $nh=512$)")
 
     elif dimension == 1 and k==3: 
         err1 = sio.loadmat(root +'_RC'+ '_rmserr_lamb_1_' + 'D'+ str(dimension) + 'k'+ str(k) + '.mat')
@@ -52,9 +52,9 @@ def k_convergence_plots( dimension=1, k=3, root=root):
 
         ts=np.array([8, 16,32,64])
         #ts=np.array([8,16,32,64])
-        plot(ts, l1_k1_error, l1_k2_error, l1_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_1$", title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=3$, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
-        plot(ts, l2_k1_error, l2_k2_error, l2_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_2$", title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=3$, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
-        plot(ts, l_k1_error, l_k2_error, l_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of the smallest $\lambda$", title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with nk=3, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
+        plot(ts, l1_k1_error, l1_k2_error, l1_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_1$")#, title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=3$, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
+        plot(ts, l2_k1_error, l2_k2_error, l2_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_2$")#, title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with $nk=3$, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
+        plot(ts, l_k1_error, l_k2_error, l_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of the smallest $\lambda$")#, title = "LOD (against FEM) $k-$ layer convergence ($1-$D case with nk=3, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
 
     elif dimension == 2 and k==3: 
         err1= sio.loadmat(root + '_RC' + '_rmserr_lamb_1_' + 'D'+ str(dimension) + 'k'+ str(k) + '.mat')
@@ -75,14 +75,14 @@ def k_convergence_plots( dimension=1, k=3, root=root):
 
         ts=np.array([8,16,32, 64])
         #ts=np.array([8,16,32,64])
-        plot(ts, l1_k1_error, l1_k2_error, l1_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_1$", title="LOD (against FEM) $k-$ layer convergence ($2-$D case with $nk=3$, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
-        plot(ts,  l2_k1_error, l2_k2_error, l2_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_2$", title="LOD (against FEM) $k-$ layer convergence ($2-$D case with $nk=3$, $p=0.01$ and  $n\epsilon = 128$, $nh=256$)")
-        plot(ts,  l_k1_error, l_k2_error, l_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of the smallest $\lambda$", title="LOD (against FEM) $k-$ layer convergence ($2-$D case with $nk=3$, $p=0.01$ and  $n\epsilon = 128$, $nh=256$)")
+        plot(ts, l1_k1_error, l1_k2_error, l1_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_1$")#, title="LOD (against FEM) $k-$ layer convergence ($2-$D case with $nk=3$, $p=0.01$ and $n\epsilon = 128$, $nh=256$)")
+        plot(ts,  l2_k1_error, l2_k2_error, l2_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of $\lambda_2$")#, title="LOD (against FEM) $k-$ layer convergence ($2-$D case with $nk=3$, $p=0.01$ and  $n\epsilon = 128$, $nh=256$)")
+        plot(ts,  l_k1_error, l_k2_error, l_k3_error, names =["$k=1$", "$k=2$", "$k=3$"], ylabel="Root mean squard error of the smallest $\lambda$")#, title="LOD (against FEM) $k-$ layer convergence ($2-$D case with $nk=3$, $p=0.01$ and  $n\epsilon = 128$, $nh=256$)")
 
     else:
         print("Other combinations are not considered!")
 
-root = 'All_Data/k_convergency/'
+#root = 'All_Data/k_convergency/'
 def k_convergence(dimension, k, root):
     alpha = 0.1
     beta = 1.
@@ -96,7 +96,7 @@ def k_convergence(dimension, k, root):
         NFine = np.array([512])    
         np.random.seed(123)
 
-        print("one dimensional with $nk=4$ and $nH=16$, $n\epsilon = 256$, $nh=512$")
+        print("one dimensional with $nk=4$ and $nH=16$, $n\epsilon = 256$, $nh=512$") 
         err_k1 = errors(Neigen, NCoarse, NFine, Nepsilon, 1, NSamples, pList,alpha,beta, model, solver  = "LOD", reference_solver="FEM", save_files = False, root=None)
         err_l1_k1 = err_k1[0]
         err_l2_k1 = err_k1[1]

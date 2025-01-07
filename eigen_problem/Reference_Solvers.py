@@ -21,7 +21,7 @@ def Exact_EigenSolver(Neigen):
 
 
 # FEM solver 1D and 2D
-def FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, model, save_file=True):
+def FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, model, save_file=True): 
         NpFine = np.prod(NFine+1)     # Number of "fine-nodes" on τ_h mesh in each direction (1-D array: [x_h, y_h, z_h])
         NpCoarse = np.prod(NCoarse+1) 
         dim = np.size(NFine)

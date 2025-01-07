@@ -20,7 +20,7 @@ def errors(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, mode
         NCoarse *= 2
         if reference_solver == "FEM" and solver == "KOOLOD":
             K_λ1, K_λ2 = KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, model, save_file=False) #KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, save_file=False)
-            M_λ1, M_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=False)
+            M_λ1, M_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, model, save_file=False)
             absErrorList_λ1 = abs(K_λ1-M_λ1)  # p in rows and Nsamples in columns
             absErrorList_λ2 = abs(K_λ2-M_λ2)
             Mean_lambda_FEM = (K_λ1 + K_λ2)/2
@@ -30,7 +30,7 @@ def errors(Neigen, NCoarse, NFine, Nepsilon, k, NSamples, pList,alpha,beta, mode
 
         elif reference_solver == "FEM" and solver == "LOD":
             K_λ1, K_λ2 = KLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, pList, Neigen, model, save_file=False)
-            M_λ1, M_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, save_file=False)
+            M_λ1, M_λ2 =  FEM_EigenSolver(Neigen, NSamples, pList,alpha,beta, NCoarse, NFine, Nepsilon, model, save_file=False)
             absErrorList_λ1 = abs(K_λ1-M_λ1)  # p in rows and Nsamples in columns
             absErrorList_λ2 = abs(K_λ2-M_λ2)
             Mean_lambda_FEM = (K_λ1 + K_λ2)/2

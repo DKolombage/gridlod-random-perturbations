@@ -41,7 +41,7 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
     basis = fem.assembleProlongationMatrix(world.NWorldCoarse, world.NCoarseElement)
     computePatch = lambda TInd: lod_periodic.PatchPeriodic(world, k, TInd)
     patchT = list(map(computePatch, range(world.NtCoarse)))
-    KFullpert = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijRef, periodic=True)
+   # KFullpert = lod_periodic.assembleMsStiffnessMatrix(world, patchT, KmsijRef, periodic=True)
     KOLOD_λ1 = np.zeros((len(pList), NSamples))
     KOLOD_λ2 = np.zeros((len(pList), NSamples))
     KOLOD_λ1vec =np.zeros((len(pList), NSamples))
@@ -155,5 +155,5 @@ def KOOLOD_MFEM_EigenSolver(NCoarse, NFine, Nepsilon, k, alpha, beta, NSamples, 
         if save_file:
             sio.savemat('KOOLOD_Eigenvalues' + '.mat', {'KOOLOD_1st_Evalue': KOLOD_λ1, 'KOOLOD_2nd_Evalue': KOLOD_λ2, 'pList': pList})
             sio.savemat('KOOLOD_Eigenfunctions' + '.mat', {'lambda_1_vecs': evecs[:,1]})
-    return KOLOD_λ1, KOLOD_λ2  #, print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
+    return KOLOD_λ1, KOLOD_λ2  # print(ln.eigsh(KOOLOD_pert_Free_DoF , Neigen,  MFEM_Free_DoF, sigma =0.005, which='LM', return_eigenvectors = True, tol=1E-4) )
 
